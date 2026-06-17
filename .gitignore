@@ -17,6 +17,8 @@ ehthumbs_vista.db
 ### Eclipse ###
 # m2e
 .factorypath
+# Eclipse project metadata (IDE-generated, not project-specific)
+**/.project
 
 ### Java ###
 # Compiled class file

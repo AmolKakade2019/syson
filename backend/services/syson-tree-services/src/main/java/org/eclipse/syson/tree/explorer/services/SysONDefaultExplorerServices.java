@@ -38,9 +38,11 @@ import org.eclipse.sirius.web.application.views.explorer.services.api.IExplorerS
 import org.eclipse.sirius.web.domain.boundedcontexts.representationdata.RepresentationMetadata;
 import org.eclipse.sirius.web.domain.boundedcontexts.representationdata.services.api.IRepresentationMetadataSearchService;
 import org.eclipse.syson.sysml.Element;
+import org.eclipse.syson.sysml.Expression;
 import org.eclipse.syson.sysml.Type;
 import org.eclipse.syson.sysml.ViewUsage;
-import org.eclipse.syson.sysml.util.ElementUtil;
+import org.eclipse.syson.sysml.metamodel.services.MetamodelQueryElementService;
+import org.eclipse.syson.sysml.metamodel.util.ElementUtil;
 import org.eclipse.syson.tree.explorer.fragments.KerMLStandardLibraryDirectory;
 import org.eclipse.syson.tree.explorer.fragments.LibrariesDirectory;
 import org.eclipse.syson.tree.explorer.fragments.SysMLStandardLibraryDirectory;
@@ -74,6 +76,8 @@ public class SysONDefaultExplorerServices implements ISysONDefaultExplorerServic
 
     private final IReadOnlyObjectPredicate readOnlyObjectPredicate;
 
+    private final MetamodelQueryElementService metamodelQueryElementService;
+
     public SysONDefaultExplorerServices(IIdentityService identityService, IContentService contentService, IRepresentationMetadataSearchService representationMetadataSearchService,
             IExplorerServices explorerServices, ILabelService labelService, ISysONExplorerFilterService filterService, final IReadOnlyObjectPredicate readOnlyObjectPredicate) {
         this.identityService = Objects.requireNonNull(identityService);
@@ -83,6 +87,7 @@ public class SysONDefaultExplorerServices implements ISysONDefaultExplorerServic
         this.labelService = Objects.requireNonNull(labelService);
         this.filterService = Objects.requireNonNull(filterService);
         this.readOnlyObjectPredicate = Objects.requireNonNull(readOnlyObjectPredicate);
+        this.metamodelQueryElementService = new MetamodelQueryElementService();
     }
 
     @Override
@@ -148,6 +153,8 @@ public class SysONDefaultExplorerServices implements ISysONDefaultExplorerServic
         String label = "";
         if (self instanceof ISysONExplorerFragment fragment) {
             label = fragment.getLabel();
+        } else if (self instanceof Expression expression && this.metamodelQueryElementService.isExpressionDefinition(expression)) {
+            label = this.metamodelQueryElementService.getExpressionTextualRepresentation(expression);
         } else if (self instanceof Type type) {
             String name = type.getName();
             if (name != null) {
@@ -235,7 +242,7 @@ public class SysONDefaultExplorerServices implements ISysONDefaultExplorerServic
 
     @Override
     public boolean canCreateNewObjectsFromText(Object self) {
-        return self instanceof Element && this.isEditable(self);
+        return self instanceof Element element && !this.readOnlyObjectPredicate.test(element);
     }
 
     @Override
@@ -274,7 +281,7 @@ public class SysONDefaultExplorerServices implements ISysONDefaultExplorerServic
         if (self instanceof ISysONExplorerFragment fragment) {
             result = fragment.isEditable();
         } else if (self instanceof Element element) {
-            result = !this.readOnlyObjectPredicate.test(element);
+            result = !this.readOnlyObjectPredicate.test(element) && !this.metamodelQueryElementService.isExpressionDefinition(element);
         } else if (self instanceof Resource resource) {
             result = !this.readOnlyObjectPredicate.test(resource);
         }

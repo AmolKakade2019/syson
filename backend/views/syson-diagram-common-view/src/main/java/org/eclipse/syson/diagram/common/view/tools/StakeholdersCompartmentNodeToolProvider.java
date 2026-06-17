@@ -13,6 +13,7 @@
 package org.eclipse.syson.diagram.common.view.tools;
 
 import org.eclipse.sirius.components.core.api.IEditingContext;
+import org.eclipse.sirius.components.trees.renderer.TreeRenderer;
 import org.eclipse.sirius.components.view.diagram.SelectionDialogDescription;
 import org.eclipse.syson.diagram.common.view.services.ViewCreateService;
 import org.eclipse.syson.diagram.common.view.services.ViewToolService;
@@ -41,13 +42,23 @@ public class StakeholdersCompartmentNodeToolProvider extends AbstractCompartment
         var domainName = SysMLMetamodelHelper.buildQualifiedName(SysmlPackage.eINSTANCE.getPartUsage());
         var selectionDialogTree = this.diagramBuilderHelper.newSelectionDialogTreeDescription()
                 .elementsExpression(ServiceMethod.of0(ViewToolService::getStakeholderSelectionDialogElements).aql(IEditingContext.EDITING_CONTEXT))
-                .childrenExpression(ServiceMethod.of0(ViewToolService::getStakeholderSelectionDialogChildren).aqlSelf())
+                .childrenExpression(ServiceMethod.of2(ViewToolService::getStakeholderSelectionDialogChildren).aqlSelf(IEditingContext.EDITING_CONTEXT, TreeRenderer.EXPANDED))
                 .isSelectableExpression(AQLConstants.AQL_SELF + ".oclIsKindOf(" + domainName + ")")
                 .build();
         return this.diagramBuilderHelper.newSelectionDialogDescription()
                 .selectionDialogTreeDescription(selectionDialogTree)
-                .selectionMessage("Select an existing Part as stakeholder:")
-                .optional(false)
+                .defaultTitleExpression(this.getNodeToolName())
+                .noSelectionTitleExpression(this.getNodeToolName())
+                .withSelectionTitleExpression(this.getNodeToolName())
+                .descriptionExpression("Select a stakeholder:")
+                .noSelectionActionLabelExpression("Create a new stakeholder")
+                .noSelectionActionDescriptionExpression("Create a new stakeholder without specialization")
+                .withSelectionActionLabelExpression("Select an existing Element as stakeholder")
+                .withSelectionActionDescriptionExpression("Create a new specialized stakeholder")
+                .noSelectionActionStatusMessageExpression("It will create a new stakeholder without specialization")
+                .selectionRequiredWithoutSelectionStatusMessageExpression("Select one Element to specialize the new stakeholder")
+                .selectionRequiredWithSelectionStatusMessageExpression(AQLConstants.AQL + "'It will create an stakeholder specialized with ' + selectedObjects->first().name")
+                .optional(true)
                 .build();
     }
 
@@ -58,7 +69,7 @@ public class StakeholdersCompartmentNodeToolProvider extends AbstractCompartment
 
     @Override
     protected String getNodeToolIconURLsExpression() {
-        return "/icons/full/obj16/StakeholderMembership.svg";
+        return "/icons/full/obj16/Stakeholder.svg";
     }
 
     @Override

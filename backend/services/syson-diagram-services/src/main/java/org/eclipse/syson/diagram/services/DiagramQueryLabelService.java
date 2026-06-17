@@ -57,13 +57,14 @@ import org.eclipse.syson.sysml.TransitionUsage;
 import org.eclipse.syson.sysml.Type;
 import org.eclipse.syson.sysml.Usage;
 import org.eclipse.syson.sysml.VariantMembership;
-import org.eclipse.syson.sysml.helper.LabelConstants;
-import org.eclipse.syson.sysml.textual.SysMLElementSerializer;
-import org.eclipse.syson.sysml.textual.SysMLSerializingOptions;
-import org.eclipse.syson.sysml.textual.utils.Appender;
-import org.eclipse.syson.sysml.textual.utils.FileNameDeresolver;
-import org.eclipse.syson.sysml.textual.utils.INameDeresolver;
-import org.eclipse.syson.sysml.util.ElementUtil;
+import org.eclipse.syson.sysml.metamodel.helper.LabelConstants;
+import org.eclipse.syson.sysml.metamodel.services.MetamodelQueryElementService;
+import org.eclipse.syson.sysml.metamodel.services.textual.SysMLElementSerializer;
+import org.eclipse.syson.sysml.metamodel.services.textual.SysMLSerializingOptions;
+import org.eclipse.syson.sysml.metamodel.services.textual.utils.Appender;
+import org.eclipse.syson.sysml.metamodel.services.textual.utils.FileNameDeresolver;
+import org.eclipse.syson.sysml.metamodel.services.textual.utils.INameDeresolver;
+import org.eclipse.syson.sysml.metamodel.util.ElementUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -93,14 +94,21 @@ public class DiagramQueryLabelService implements IDiagramLabelService {
 
     private final Logger logger = LoggerFactory.getLogger(DiagramQueryLabelService.class);
 
+    private final MetamodelQueryElementService metamodelQueryElementService = new MetamodelQueryElementService();
+
     @Override
     public String getIdentificationLabel(Element element) {
         StringBuilder label = new StringBuilder();
-        if (element instanceof ActionUsage && element.eContainer() instanceof StateSubactionMembership ssm) {
-            label.append(ssm.getKind()).append(LabelConstants.SPACE);
-        }
-        label.append(this.getShortNameLabel(element));
+        var shortNameLabel = this.getShortNameLabel(element);
         String declaredName = element.getDeclaredName();
+
+        if (element instanceof ActionUsage && element.eContainer() instanceof StateSubactionMembership ssm) {
+            label.append(ssm.getKind());
+            if (!shortNameLabel.isBlank() || declaredName != null) {
+                label.append(LabelConstants.SPACE);
+            }
+        }
+        label.append(shortNameLabel);
         if (declaredName != null) {
             label.append(declaredName);
         }
@@ -119,6 +127,7 @@ public class DiagramQueryLabelService implements IDiagramLabelService {
             if (!referenceSubsetting.isIsImplied()) {
                 var referencedFeature = referenceSubsetting.getReferencedFeature();
                 if (referencedFeature != null) {
+                    label.append(LabelConstants.SPACE);
                     label.append(LabelConstants.REFERENCES);
                     label.append(LabelConstants.SPACE);
                     label.append(this.getDeclaredNameLabel(referencedFeature));
@@ -503,6 +512,22 @@ public class DiagramQueryLabelService implements IDiagramLabelService {
     }
 
     /**
+     * The default begin label for edges.
+     *
+     * @param element
+     *            the element to get the edge label from
+     * @return the begin edge label
+     */
+    public String getBeginEdgeLabel(Element element) {
+        var optionalExpression = this.metamodelQueryElementService.findSingleExpressionDefinition(element);
+        if (optionalExpression.isPresent()) {
+            var expression = optionalExpression.get();
+            return LabelConstants.OPEN_BRACKET + this.metamodelQueryElementService.getExpressionTextualRepresentation(expression) + LabelConstants.CLOSE_BRACKET;
+        }
+        return null;
+    }
+
+    /**
      * The default label for edges.
      *
      * @param element
@@ -549,11 +574,11 @@ public class DiagramQueryLabelService implements IDiagramLabelService {
     }
 
     /**
-     * Returns the label for the given {@code dependency}.
+     * Returns the label for the given {@link SatisfyRequirementUsage}.
      *
-     * @param dependency
-     *            the dependency to get the edge label from
-     * @return the edge label
+     * @param satisfyRequirementUsage
+     *          The given {@link SatisfyRequirementUsage}
+     * @return the label for the given {@link SatisfyRequirementUsage}
      */
     public String getSatisfyLabel(SatisfyRequirementUsage satisfyRequirementUsage) {
         StringBuilder label = new StringBuilder();
@@ -577,8 +602,19 @@ public class DiagramQueryLabelService implements IDiagramLabelService {
         } else if (!constraintUsage.getOwnedMember().isEmpty() && constraintUsage.getOwnedMember().get(0) instanceof Expression expression) {
             label.append(this.getSysmlTextualRepresentation(expression, directEditInput));
         } else {
-            // The constraint doesn't have an expression, we use its name as default label.
-            label.append(this.getIdentificationLabel(constraintUsage));
+            var identificationLabel = this.getIdentificationLabel(constraintUsage);
+            if (identificationLabel.isBlank()) {
+                // The constraint doesn't have an expression and does not have a name, we use the referenced feature name if the referenced feature exists
+                var ownedReferenceSubsetting = constraintUsage.getOwnedReferenceSubsetting();
+                if (ownedReferenceSubsetting != null) {
+                    label.append(this.getIdentificationLabel(ownedReferenceSubsetting.getReferencedFeature()));
+                }
+            } else {
+                // The constraint doesn't have an expression and has a name, we use its name and the referenced feature name
+                label.append(this.getIdentificationLabel(constraintUsage));
+                label.append(this.getReferenceSubsettingLabel(constraintUsage));
+            }
+
         }
         return label.toString();
     }
@@ -648,7 +684,7 @@ public class DiagramQueryLabelService implements IDiagramLabelService {
      * Get the value to display when a direct edit has been called on the given {@link Comment}.
      *
      * @param comment
-     *            the given {@link comment}.
+     *            the given {@link Comment}.
      * @return the value to display.
      */
     public String getInitialDirectEditListItemLabel(Comment comment) {

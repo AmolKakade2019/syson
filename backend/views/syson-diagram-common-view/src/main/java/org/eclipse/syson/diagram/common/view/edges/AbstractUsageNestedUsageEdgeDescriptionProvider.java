@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2023, 2025 Obeo.
+ * Copyright (c) 2023, 2026 Obeo.
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v2.0
  * which accompanies this distribution, and is available at
@@ -31,6 +31,7 @@ import org.eclipse.sirius.components.view.diagram.LabelEditTool;
 import org.eclipse.sirius.components.view.diagram.LineStyle;
 import org.eclipse.sirius.components.view.diagram.NodeDescription;
 import org.eclipse.sirius.components.view.diagram.SynchronizationPolicy;
+import org.eclipse.syson.diagram.common.view.services.ViewToolService;
 import org.eclipse.syson.diagram.services.aql.DiagramMutationAQLService;
 import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
 import org.eclipse.syson.util.AQLConstants;
@@ -83,8 +84,10 @@ public abstract class AbstractUsageNestedUsageEdgeDescriptionProvider extends Ab
                 .conditionalStyles(this.createReferenceConditionalEdgeStyle())
                 .synchronizationPolicy(SynchronizationPolicy.SYNCHRONIZED)
                 .targetExpression(AQLConstants.AQL_SELF + "." + this.eReference.getName())
-                .preconditionExpression(AQLConstants.AQL + "not " + org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_SOURCE + ".isAncestorOf("
-                        + org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_TARGET + ", cache)")
+                .preconditionExpression(ServiceMethod.of2(DiagramQueryAQLService::isNotAncestorOf)
+                        .aql(org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_SOURCE,
+                                org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_TARGET,
+                                "cache"))
                 .build();
     }
 
@@ -137,7 +140,7 @@ public abstract class AbstractUsageNestedUsageEdgeDescriptionProvider extends Ab
     @Override
     protected DeleteTool getEdgeDeleteTool() {
         var changeContext = this.viewBuilderHelper.newChangeContext()
-                .expression("aql:semanticEdgeTarget.moveToClosestContainingPackage()");
+                .expression(ServiceMethod.of0(ViewToolService::moveToClosestContainingPackage).aql(org.eclipse.sirius.components.diagrams.description.EdgeDescription.SEMANTIC_EDGE_TARGET));
 
         return this.diagramBuilderHelper.newDeleteTool()
                 .name("Delete from Model")

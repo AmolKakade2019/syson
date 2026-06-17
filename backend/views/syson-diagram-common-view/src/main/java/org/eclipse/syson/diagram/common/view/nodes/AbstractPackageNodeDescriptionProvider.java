@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.syson.diagram.common.view.nodes;
 
+import static org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -50,11 +52,11 @@ import org.eclipse.syson.diagram.common.view.tools.ToolSectionDescription;
 import org.eclipse.syson.diagram.services.aql.DiagramMutationAQLService;
 import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
 import org.eclipse.syson.services.UtilService;
+import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.sysmlcustomnodes.SysMLCustomnodesFactory;
 import org.eclipse.syson.sysmlcustomnodes.SysMLPackageNodeStyleDescription;
 import org.eclipse.syson.util.AQLConstants;
-import org.eclipse.syson.util.AQLUtils;
 import org.eclipse.syson.util.IDescriptionNameGenerator;
 import org.eclipse.syson.util.ServiceMethod;
 import org.eclipse.syson.util.SysMLMetamodelHelper;
@@ -138,8 +140,10 @@ public abstract class AbstractPackageNodeDescriptionProvider extends AbstractNod
                 .domainType(domainType)
                 .insideLabel(this.createInsideLabelDescription())
                 .name(this.descriptionNameGenerator.getNodeName(SysmlPackage.eINSTANCE.getPackage()))
-                .semanticCandidatesExpression(AQLUtils.getSelfServiceCallExpression("getExposedElements",
-                        List.of(domainType, org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT)))
+                .semanticCandidatesExpression(ServiceMethod.of4(DiagramQueryAQLService.class,
+                        DiagramQueryAQLService::getExposedElements, Element.class, EClass.class, List.class,
+                        IEditingContext.class, DiagramContext.class)
+                        .aqlSelf(domainType, ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT))
                 .style(this.createPackageNodeStyle())
                 .userResizable(UserResizableDirection.BOTH)
                 .synchronizationPolicy(SynchronizationPolicy.SYNCHRONIZED)
@@ -233,9 +237,8 @@ public abstract class AbstractPackageNodeDescriptionProvider extends AbstractNod
                 .name("Drop from Diagram")
                 .acceptedNodeTypes(this.getDroppableNodes(cache).toArray(NodeDescription[]::new))
                 .body(this.viewBuilderHelper.newChangeContext()
-                        .expression(ServiceMethod.of6(DiagramMutationAQLService::dropElementFromDiagram).aql("droppedElement", "droppedNode", "targetElement", "targetNode",
-                                IEditingContext.EDITING_CONTEXT,
-                                DiagramContext.DIAGRAM_CONTEXT, ViewDiagramDescriptionConverter.CONVERTED_NODES_VARIABLE))
+                        .expression(ServiceMethod.of6(DiagramMutationAQLService::dropElementFromDiagram).aqlArrow("droppedElements", "droppedNodes", "targetElement", "targetNode",
+                                IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT, ViewDiagramDescriptionConverter.CONVERTED_NODES_VARIABLE))
                         .build())
                 .build();
     }

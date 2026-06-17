@@ -12,7 +12,10 @@
  *******************************************************************************/
 package org.eclipse.syson.standard.diagrams.view.nodes;
 
+import static org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -46,6 +49,7 @@ import org.eclipse.syson.diagram.common.view.services.ViewCreateService;
 import org.eclipse.syson.diagram.common.view.services.ViewLabelService;
 import org.eclipse.syson.diagram.common.view.services.description.ToolConstants;
 import org.eclipse.syson.diagram.common.view.services.description.ToolDescriptionService;
+import org.eclipse.syson.diagram.common.view.tools.ExhibitStateNodeToolProvider;
 import org.eclipse.syson.diagram.common.view.tools.NamespaceImportNodeToolProvider;
 import org.eclipse.syson.diagram.common.view.tools.SetAsViewToolProvider;
 import org.eclipse.syson.diagram.common.view.tools.ToolSectionDescription;
@@ -54,6 +58,7 @@ import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
 import org.eclipse.syson.services.DeleteService;
 import org.eclipse.syson.services.UtilService;
 import org.eclipse.syson.standard.diagrams.view.SDVDiagramDescriptionProvider;
+import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.sysmlcustomnodes.SysMLCustomnodesFactory;
 import org.eclipse.syson.util.AQLUtils;
@@ -90,8 +95,10 @@ public class ViewUsageNodeDescriptionProvider extends AbstractNodeDescriptionPro
                 .domainType(domainType)
                 .insideLabel(this.createInsideLabelDescription())
                 .name(this.getNodeDescriptionName())
-                .semanticCandidatesExpression(AQLUtils.getSelfServiceCallExpression("getExposedElements",
-                        List.of(domainType, org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT)))
+                .semanticCandidatesExpression(ServiceMethod.of4(DiagramQueryAQLService.class,
+                        DiagramQueryAQLService::getExposedElements, Element.class, EClass.class, List.class,
+                        IEditingContext.class, DiagramContext.class)
+                        .aqlSelf(domainType, ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT))
                 .style(this.createViewFrameNodeStyle())
                 .userResizable(UserResizableDirection.BOTH)
                 .synchronizationPolicy(SynchronizationPolicy.SYNCHRONIZED)
@@ -224,6 +231,8 @@ public class ViewUsageNodeDescriptionProvider extends AbstractNodeDescriptionPro
         elements.forEach(definition -> cache.getNodeDescription(this.descriptionNameGenerator.getNodeName(definition))
                 .ifPresent(nodeDescription -> nodeTools.add(this.createNodeTool(nodeDescription, definition))));
 
+        nodeTools.addAll(this.addCustomTools(cache, toolSectionName));
+
         nodeTools.sort(Comparator.comparing(Tool::getName));
 
         return nodeTools.toArray(NodeTool[]::new);
@@ -268,5 +277,14 @@ public class ViewUsageNodeDescriptionProvider extends AbstractNodeDescriptionPro
                 .body(changeContextViewUsageOwner.build())
                 .elementsToSelectExpression("aql:newInstance")
                 .build();
+    }
+
+    private Collection<? extends NodeTool> addCustomTools(IViewDiagramElementFinder cache, String toolSectionName) {
+        var nodeTools = new ArrayList<NodeTool>();
+        if (SDVDiagramDescriptionProvider.BEHAVIOR_TOOL_SECTION.name().equals(toolSectionName)) {
+            nodeTools.add(new ExhibitStateNodeToolProvider(false).create(cache));
+            nodeTools.add(new ExhibitStateNodeToolProvider(true).create(cache));
+        }
+        return nodeTools;
     }
 }

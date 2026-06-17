@@ -13,6 +13,7 @@
 package org.eclipse.syson.diagram.common.view.tools;
 
 import org.eclipse.sirius.components.core.api.IEditingContext;
+import org.eclipse.sirius.components.trees.renderer.TreeRenderer;
 import org.eclipse.sirius.components.view.diagram.SelectionDialogDescription;
 import org.eclipse.syson.diagram.common.view.services.ViewCreateService;
 import org.eclipse.syson.diagram.common.view.services.ViewToolService;
@@ -38,13 +39,23 @@ public class SubjectCompartmentNodeToolProvider extends AbstractCompartmentNodeT
         String domainType = SysMLMetamodelHelper.buildQualifiedName(SysmlPackage.eINSTANCE.getType());
         var selectionDialogTree = this.diagramBuilderHelper.newSelectionDialogTreeDescription()
                 .elementsExpression(ServiceMethod.of0(ViewToolService::getSubjectSelectionDialogElements).aql(IEditingContext.EDITING_CONTEXT))
-                .childrenExpression(ServiceMethod.of0(ViewToolService::getSubjectSelectionDialogChildren).aqlSelf())
+                .childrenExpression(ServiceMethod.of2(ViewToolService::getSubjectSelectionDialogChildren).aqlSelf(IEditingContext.EDITING_CONTEXT, TreeRenderer.EXPANDED))
                 .isSelectableExpression(AQLConstants.AQL_SELF + ".oclIsKindOf(" + domainType + ")")
                 .build();
         return this.diagramBuilderHelper.newSelectionDialogDescription()
                 .selectionDialogTreeDescription(selectionDialogTree)
-                .selectionMessage("Select an existing Type as subject:")
-                .optional(false)
+                .defaultTitleExpression(this.getNodeToolName())
+                .noSelectionTitleExpression(this.getNodeToolName())
+                .withSelectionTitleExpression(this.getNodeToolName())
+                .descriptionExpression("Create a subject:")
+                .noSelectionActionLabelExpression("Create a new subject")
+                .noSelectionActionDescriptionExpression("Create a new subject without specialization")
+                .withSelectionActionLabelExpression("Select an existing Element as subject")
+                .withSelectionActionDescriptionExpression("Create a new specialized subject")
+                .noSelectionActionStatusMessageExpression("It will create a new subject without specialization")
+                .selectionRequiredWithoutSelectionStatusMessageExpression("Select one Element to specialize the new subject")
+                .selectionRequiredWithSelectionStatusMessageExpression(AQLConstants.AQL + "'It will create a subject specialized with ' + selectedObjects->first().name")
+                .optional(true)
                 .build();
     }
 

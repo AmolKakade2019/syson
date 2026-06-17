@@ -14,6 +14,7 @@ package org.eclipse.syson.diagram.common.view.nodes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.emf.common.util.EList;
@@ -21,18 +22,24 @@ import org.eclipse.sirius.components.collaborative.diagrams.DiagramContext;
 import org.eclipse.sirius.components.core.api.IEditingContext;
 import org.eclipse.sirius.components.diagrams.Node;
 import org.eclipse.sirius.components.view.UserColor;
+import org.eclipse.sirius.components.view.builder.IViewDiagramElementFinder;
 import org.eclipse.sirius.components.view.builder.generated.diagram.DiagramBuilders;
 import org.eclipse.sirius.components.view.builder.generated.view.ViewBuilders;
 import org.eclipse.sirius.components.view.builder.providers.IColorProvider;
 import org.eclipse.sirius.components.view.builder.providers.INodeDescriptionProvider;
 import org.eclipse.sirius.components.view.diagram.ImageNodeStyleDescription;
+import org.eclipse.sirius.components.view.diagram.NodeDescription;
 import org.eclipse.sirius.components.view.diagram.NodeTool;
 import org.eclipse.sirius.components.view.diagram.NodeToolSection;
 import org.eclipse.sirius.components.view.diagram.provider.DefaultToolsFactory;
 import org.eclipse.sirius.components.view.emf.diagram.ViewDiagramDescriptionConverter;
 import org.eclipse.syson.diagram.services.aql.DiagramMutationAQLService;
+import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
+import org.eclipse.syson.sysml.Element;
+import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.util.AQLConstants;
 import org.eclipse.syson.util.AQLUtils;
+import org.eclipse.syson.util.IDescriptionNameGenerator;
 import org.eclipse.syson.util.ServiceMethod;
 import org.eclipse.syson.util.StandardDiagramsConstants;
 
@@ -79,6 +86,19 @@ public abstract class AbstractNodeDescriptionProvider implements INodeDescriptio
                 .build();
     }
 
+    protected List<NodeDescription> getFlowUsageToolTargetDescriptions(IViewDiagramElementFinder cache, IDescriptionNameGenerator descriptionNameGenerator) {
+        var nodes = new ArrayList<NodeDescription>();
+        cache.getNodeDescription(descriptionNameGenerator.getBorderNodeName(SysmlPackage.eINSTANCE.getPortUsage(), SysmlPackage.eINSTANCE.getUsage_NestedPort())).ifPresent(nodes::add);
+        cache.getNodeDescription(descriptionNameGenerator.getBorderNodeName(SysmlPackage.eINSTANCE.getPortUsage(), SysmlPackage.eINSTANCE.getDefinition_OwnedPort())).ifPresent(nodes::add);
+        cache.getNodeDescription(descriptionNameGenerator.getInheritedBorderNodeName(SysmlPackage.eINSTANCE.getPortUsage(), SysmlPackage.eINSTANCE.getUsage_NestedPort())).ifPresent(nodes::add);
+        cache.getNodeDescription(descriptionNameGenerator.getInheritedBorderNodeName(SysmlPackage.eINSTANCE.getPortUsage(), SysmlPackage.eINSTANCE.getDefinition_OwnedPort())).ifPresent(nodes::add);
+        cache.getNodeDescription(descriptionNameGenerator.getBorderNodeName(SysmlPackage.eINSTANCE.getItemUsage(), SysmlPackage.eINSTANCE.getDefinition_OwnedItem())).ifPresent(nodes::add);
+        cache.getNodeDescription(descriptionNameGenerator.getBorderNodeName(SysmlPackage.eINSTANCE.getItemUsage(), SysmlPackage.eINSTANCE.getUsage_NestedItem())).ifPresent(nodes::add);
+        cache.getNodeDescription(descriptionNameGenerator.getBorderNodeName(SysmlPackage.eINSTANCE.getItemUsage(), SysmlPackage.eINSTANCE.getBehavior_Parameter())).ifPresent(nodes::add);
+        cache.getNodeDescription(descriptionNameGenerator.getBorderNodeName(SysmlPackage.eINSTANCE.getReferenceUsage())).ifPresent(nodes::add);
+        return nodes;
+    }
+
     protected NodeTool getDeleteFromDiagramTool() {
         return this.diagramBuilderHelper.newNodeTool()
                 .name("Delete from Diagram")
@@ -100,10 +120,29 @@ public abstract class AbstractNodeDescriptionProvider implements INodeDescriptio
                 .preconditionExpression(AQLConstants.AQL + "self.oclIsKindOf(sysml::Element) and not self.oclIsKindOf(sysml::Relationship)")
                 .body(this.viewBuilderHelper.newChangeContext()
                         .expression(
-                                ServiceMethod.of4(DiagramMutationAQLService::duplicateElementAndExpose)
+                                ServiceMethod.of4(DiagramMutationAQLService.class, DiagramMutationAQLService::duplicateElementAndExpose, Element.class, IEditingContext.class,
+                                                DiagramContext.class, List.class, Map.class)
                                         .aqlSelf(IEditingContext.EDITING_CONTEXT,
                                                 DiagramContext.DIAGRAM_CONTEXT,
-                                                Node.SELECTED_NODE,
+                                                "Sequence{selectedNode}",
+                                                ViewDiagramDescriptionConverter.CONVERTED_NODES_VARIABLE))
+                        .build())
+                .build();
+    }
+
+    protected NodeTool getDuplicateElementsAndNodesTool() {
+        return this.diagramBuilderHelper.newNodeTool()
+                .name("Duplicate Element")
+                .iconURLsExpression("/images/content_copy.svg")
+                .preconditionExpression(AQLConstants.AQL
+                        + "selectedNodes->notEmpty() and selectedEdges->isEmpty() and self->forAll(e | e.oclIsKindOf(sysml::Element) and not e.oclIsKindOf(sysml::Relationship))")
+                .body(this.viewBuilderHelper.newChangeContext()
+                        .expression(
+                                ServiceMethod.of4(DiagramMutationAQLService.class, DiagramMutationAQLService::duplicateElementAndExpose, Element.class, IEditingContext.class,
+                                                DiagramContext.class, List.class, Map.class)
+                                        .aqlSelf(IEditingContext.EDITING_CONTEXT,
+                                                DiagramContext.DIAGRAM_CONTEXT,
+                                                "selectedNodes",
                                                 ViewDiagramDescriptionConverter.CONVERTED_NODES_VARIABLE))
                         .build())
                 .build();
@@ -113,8 +152,9 @@ public abstract class AbstractNodeDescriptionProvider implements INodeDescriptio
         return this.diagramBuilderHelper.newNodeTool()
                 .name("Show content as Nested")
                 .iconURLsExpression("/icons/full/obj16/ShowTool.svg")
-                .preconditionExpression(AQLUtils.getSelfServiceCallExpression("isView",
-                        List.of(AQLUtils.aqlString(StandardDiagramsConstants.GV_QN), Node.SELECTED_NODE, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT)))
+                .preconditionExpression(ServiceMethod.of4(DiagramQueryAQLService.class, DiagramQueryAQLService::isView,
+                        Element.class, String.class, Node.class, IEditingContext.class, DiagramContext.class)
+                        .aqlSelf(AQLUtils.aqlString(StandardDiagramsConstants.GV_QN), Node.SELECTED_NODE, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT))
                 .body(this.diagramBuilderHelper.newDeleteView()
                         .children(this.viewBuilderHelper.newChangeContext()
                                 .expression(
@@ -128,8 +168,9 @@ public abstract class AbstractNodeDescriptionProvider implements INodeDescriptio
         return this.diagramBuilderHelper.newNodeTool()
                 .name("Show content as Tree")
                 .iconURLsExpression("/icons/full/obj16/ShowTool.svg")
-                .preconditionExpression(AQLUtils.getSelfServiceCallExpression("isView",
-                        List.of(AQLUtils.aqlString(StandardDiagramsConstants.GV_QN), Node.SELECTED_NODE, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT)))
+                .preconditionExpression(ServiceMethod.of4(DiagramQueryAQLService.class, DiagramQueryAQLService::isView,
+                        Element.class, String.class, Node.class, IEditingContext.class, DiagramContext.class)
+                        .aqlSelf(AQLUtils.aqlString(StandardDiagramsConstants.GV_QN), Node.SELECTED_NODE, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT))
                 .body(this.diagramBuilderHelper.newDeleteView()
                         .children(this.viewBuilderHelper.newChangeContext()
                                 .expression(

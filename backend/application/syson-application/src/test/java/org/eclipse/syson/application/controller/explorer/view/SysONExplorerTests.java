@@ -28,16 +28,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.sirius.components.collaborative.trees.api.TreeFilter;
-import org.eclipse.sirius.components.core.api.IEditingContextSearchService;
 import org.eclipse.sirius.components.core.api.IIdentityService;
 import org.eclipse.sirius.components.core.api.IObjectSearchService;
-import org.eclipse.sirius.components.core.api.IRepresentationDescriptionSearchService;
 import org.eclipse.sirius.components.graphql.tests.ExecuteEditingContextFunctionInput;
 import org.eclipse.sirius.components.graphql.tests.ExecuteEditingContextFunctionSuccessPayload;
 import org.eclipse.sirius.components.graphql.tests.api.IExecuteEditingContextFunctionRunner;
 import org.eclipse.sirius.components.trees.TreeItem;
-import org.eclipse.sirius.components.trees.description.TreeDescription;
 import org.eclipse.sirius.web.application.views.explorer.ExplorerEventInput;
 import org.eclipse.sirius.web.application.views.explorer.services.ExplorerDescriptionProvider;
 import org.eclipse.sirius.web.application.views.explorer.services.ExplorerTreeItemContextMenuEntryProvider;
@@ -46,20 +42,23 @@ import org.eclipse.sirius.web.tests.services.api.IGivenInitialServerState;
 import org.eclipse.sirius.web.tests.services.explorer.ExplorerEventSubscriptionRunner;
 import org.eclipse.sirius.web.tests.services.representation.RepresentationIdBuilder;
 import org.eclipse.syson.AbstractIntegrationTests;
+import org.eclipse.syson.GivenSysONServer;
 import org.eclipse.syson.application.controller.explorer.testers.ExpandAllTreeItemTester;
 import org.eclipse.syson.application.controller.explorer.testers.TreeItemContextMenuTester;
 import org.eclipse.syson.application.controller.explorer.testers.TreePathTester;
+import org.eclipse.syson.application.data.ActionTransitionUsagesProjectData;
+import org.eclipse.syson.application.data.ExpressionSamplesProjectData;
 import org.eclipse.syson.application.data.GeneralViewEmptyTestProjectData;
 import org.eclipse.syson.application.data.ProjectWithLibraryDependencyContainingCommentAndLibraryPackageTestProjectData;
 import org.eclipse.syson.application.data.ProjectWithLibraryDependencyContainingLibraryPackageTestProjectData;
 import org.eclipse.syson.application.data.ProjectWithLibraryDependencyContainingPackageAndLibraryPackageTestProjectData;
 import org.eclipse.syson.application.data.ProjectWithUsedBatmobileLibraryDependencyTestProjectData;
 import org.eclipse.syson.application.data.SysonStudioTestProjectData;
+import org.eclipse.syson.services.explorer.api.IExplorerDefaultFiltersSearchService;
 import org.eclipse.syson.sysml.Namespace;
 import org.eclipse.syson.sysml.OwningMembership;
 import org.eclipse.syson.sysml.Package;
 import org.eclipse.syson.tree.explorer.filters.SysONTreeFilterConstants;
-import org.eclipse.syson.tree.explorer.view.SysONTreeFilterProvider;
 import org.eclipse.syson.tree.explorer.view.SysONTreeViewDescriptionProvider;
 import org.eclipse.syson.tree.explorer.view.menu.context.SysONExplorerTreeItemContextMenuEntryProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,8 +66,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,13 +115,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     private TreePathTester treePathTester;
 
     @Autowired
-    private SysONTreeFilterProvider sysonTreeFilterProvider;
-
-    @Autowired
-    private IRepresentationDescriptionSearchService representationDescriptionSearchService;
-
-    @Autowired
-    private IEditingContextSearchService editingContextSearchService;
+    private IExplorerDefaultFiltersSearchService explorerDefaultFiltersSearchService;
 
     private String sysONExplorerTreeDescriptionId;
 
@@ -135,8 +126,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN an empty SysML Project, WHEN the available explorers are requested, THEN the SysON explorer is returned")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void getAvailableExplorersForSysMLv2Project() {
         Map<String, Object> explorerVariables = Map.of(
@@ -150,8 +140,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN a SysON Studio Project, WHEN the available explorers are requested, THEN the Sirius Web explorer is returned")
-    @Sql(scripts = { SysonStudioTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ SysonStudioTestProjectData.SCRIPT_PATH })
     @Test
     public void getAvailableExplorersForStudioProject() {
         TestTransaction.flagForCommit();
@@ -166,20 +155,11 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN an empty SysML Project, WHEN the explorer is displayed, THEN the libraries are visible and the root namespace and memberships are not visible")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentWithDefaultFilters() {
-        var optionalEditingContext = this.editingContextSearchService.findById(GeneralViewEmptyTestProjectData.EDITING_CONTEXT);
-        TreeDescription treeDescription = optionalEditingContext
-                .flatMap(editingContext -> this.representationDescriptionSearchService.findById(editingContext, this.sysONExplorerTreeDescriptionId))
-                .filter(TreeDescription.class::isInstance)
-                .map(TreeDescription.class::cast)
-                .orElse(null);
-        List<String> defaultFilters = this.sysonTreeFilterProvider.get(null, treeDescription).stream()
-                .filter(TreeFilter::defaultState)
-                .map(TreeFilter::id)
-                .toList();
+
+        List<String> defaultFilters = this.explorerDefaultFiltersSearchService.findTreeDefaultFilterIds(GeneralViewEmptyTestProjectData.EDITING_CONTEXT, this.sysONExplorerTreeDescriptionId);
         var explorerRepresentationId = this.representationIdBuilder.buildExplorerRepresentationId(this.sysONExplorerTreeDescriptionId, List.of(), defaultFilters);
         var input = new ExplorerEventInput(UUID.randomUUID(), GeneralViewEmptyTestProjectData.EDITING_CONTEXT, explorerRepresentationId);
         var flux = this.explorerEventSubscriptionRunner.run(input).flux();
@@ -257,20 +237,11 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN an empty SysML Project, WHEN the explorer is displayed with KerML and SysML libraries expanded, THEN the library models are visible")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentWithKerMLAndSysMLExpanded() {
-        var optionalEditingContext = this.editingContextSearchService.findById(GeneralViewEmptyTestProjectData.EDITING_CONTEXT);
-        TreeDescription treeDescription = optionalEditingContext
-                .flatMap(editingContext -> this.representationDescriptionSearchService.findById(editingContext, this.sysONExplorerTreeDescriptionId))
-                .filter(TreeDescription.class::isInstance)
-                .map(TreeDescription.class::cast)
-                .orElse(null);
-        List<String> defaultFilters = this.sysonTreeFilterProvider.get(null, treeDescription).stream()
-                .filter(TreeFilter::defaultState)
-                .map(TreeFilter::id)
-                .toList();
+
+        List<String> defaultFilters = this.explorerDefaultFiltersSearchService.findTreeDefaultFilterIds(GeneralViewEmptyTestProjectData.EDITING_CONTEXT, this.sysONExplorerTreeDescriptionId);
         String librariesTreeItemId = UUID.nameUUIDFromBytes("SysON_Libraries_Directory".getBytes()).toString();
         String sysmlLibrariesTreeItemId = UUID.nameUUIDFromBytes("SysON_SysML_Directory".getBytes()).toString();
         String kermlLibrariesTreeItemId = UUID.nameUUIDFromBytes("SysON_KerML_Directory".getBytes()).toString();
@@ -319,8 +290,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN an empty SysML Project, WHEN the explorer is displayed with its root model expanded and the hide memberships and hide KerML libraries filters, THEN the root model is visible and is expanded")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void getRootContentWithHideMembershipsAndHideKerMLStandardLibraries() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID, SysONTreeFilterConstants.HIDE_KERML_STANDARD_LIBRARIES_TREE_FILTER_ID);
@@ -352,20 +322,11 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN an empty SysML Project, WHEN context menu is queried, THEN the menu is returned")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void getContextMenuOfModelAndLibraryDirectories() {
-        var optionalEditingContext = this.editingContextSearchService.findById(GeneralViewEmptyTestProjectData.EDITING_CONTEXT);
-        TreeDescription treeDescription = optionalEditingContext
-                .flatMap(editingContext -> this.representationDescriptionSearchService.findById(editingContext, this.sysONExplorerTreeDescriptionId))
-                .filter(TreeDescription.class::isInstance)
-                .map(TreeDescription.class::cast)
-                .orElse(null);
-        List<String> defaultFilters = this.sysonTreeFilterProvider.get(null, treeDescription).stream()
-                .filter(TreeFilter::defaultState)
-                .map(TreeFilter::id)
-                .toList();
+
+        List<String> defaultFilters = this.explorerDefaultFiltersSearchService.findTreeDefaultFilterIds(GeneralViewEmptyTestProjectData.EDITING_CONTEXT, this.sysONExplorerTreeDescriptionId);
         // Expand the Libraries directory when building the explorer, we want to check the context menu of elements
         // under it.
         var explorerRepresentationId = this.representationIdBuilder.buildExplorerRepresentationId(this.sysONExplorerTreeDescriptionId,
@@ -422,8 +383,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN an empty SysML Project, WHEN the tree path is queried, THEN the returned tree path should take into accounts the Explorer filters.")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void treePathQueryApplyExplorerFilters() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID, SysONTreeFilterConstants.HIDE_ROOT_NAMESPACES_ID);
@@ -472,8 +432,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
      * </p>
      */
     @DisplayName("GIVEN an empty SysML Project, WHEN the tree path is queried in the Sirius Web default Explorer, THEN the returned tree path should not take into accounts the Explorer filters.")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void treePathQueryInSiriusWebDefaultExplorerDoesNotApplyExplorerFilters() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID, SysONTreeFilterConstants.HIDE_ROOT_NAMESPACES_ID);
@@ -543,9 +502,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN a SysML Project with a dependency to a library containing one Package, WHEN the explorer is displayed, THEN the library model is visible at the root of the explorer")
-    @Sql(scripts = { ProjectWithUsedBatmobileLibraryDependencyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
-            config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ ProjectWithUsedBatmobileLibraryDependencyTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentWithImportedLibraryContainingOnePackage() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID);
@@ -573,9 +530,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN a SysML Project with a dependency to a library containing one Package and one LibraryPackage, WHEN the explorer is displayed, THEN the library model is visible at the root of the explorer")
-    @Sql(scripts = { ProjectWithLibraryDependencyContainingPackageAndLibraryPackageTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
-            config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ ProjectWithLibraryDependencyContainingPackageAndLibraryPackageTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentWithImportedLibraryContainingPackageAndLibraryPackage() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID);
@@ -603,9 +558,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN a SysML Project with a dependency to a library containing one LibraryPackage, WHEN the explorer is displayed, THEN the library model is visible under the user libraries directory of the explorer")
-    @Sql(scripts = { ProjectWithLibraryDependencyContainingLibraryPackageTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
-            config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ ProjectWithLibraryDependencyContainingLibraryPackageTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentWithImportedLibraryContainingLibraryPackage() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID);
@@ -658,9 +611,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN a SysML Project with a dependency to a library containing a Comment and a LibraryPackage, WHEN the explorer is displayed, THEN the library model is visible under the user libraries directory of the explorer")
-    @Sql(scripts = { ProjectWithLibraryDependencyContainingCommentAndLibraryPackageTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
-            config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ ProjectWithLibraryDependencyContainingCommentAndLibraryPackageTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentWithImportedLibraryContainingCommentAndLibraryPackage() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID);
@@ -713,9 +664,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN a SysML library containing a LibraryPackage, WHEN the explorer is displayed on the library's semantic data, THEN the library model is visible at the root of the explorer")
-    @Sql(scripts = { ProjectWithLibraryDependencyContainingLibraryPackageTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
-            config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ ProjectWithLibraryDependencyContainingLibraryPackageTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentOnLibrarySemanticDataWithLibraryPackage() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID);
@@ -742,9 +691,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN a SysML library containing a Package and a LibraryPackage, WHEN the explorer is displayed on the library's semantic data, THEN the library model is visible at the root of the explorer")
-    @Sql(scripts = { ProjectWithLibraryDependencyContainingPackageAndLibraryPackageTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
-            config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ ProjectWithLibraryDependencyContainingPackageAndLibraryPackageTestProjectData.SCRIPT_PATH })
     @Test
     public void getExplorerContentOnLibrarySemanticDataWithPackage() {
         List<String> filters = List.of(SysONTreeFilterConstants.HIDE_MEMBERSHIPS_TREE_ITEM_FILTER_ID);
@@ -771,8 +718,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
     }
 
     @DisplayName("GIVEN the SysON Explorer, WHEN tree item context menu is requested, THEN the returned tree items are the appropriate one.")
-    @Sql(scripts = { GeneralViewEmptyTestProjectData.SCRIPT_PATH }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
-    @Sql(scripts = { "/scripts/cleanup.sql" }, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED))
+    @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
     public void sysONExplorerTreeItemContextMenuEntriesTest() {
         var expandedItemIds = List.of(
@@ -847,7 +793,7 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
             var menuEntriesIds = this.treeItemContextMenuTester.getContextMenuEntries(GeneralViewEmptyTestProjectData.EDITING_CONTEXT, treeId.get(),
                     GeneralViewEmptyTestProjectData.SemanticIds.VIEW_USAGE_ID);
             // no NewRepresentation on a ViewUsage which already contains a standard diagram or requirements-table
-            assertThat(menuEntriesIds).hasSize(4)
+            assertThat(menuEntriesIds).hasSize(5)
                     .contains(ExplorerTreeItemContextMenuEntryProvider.NEW_OBJECT)
                     .contains(SysONExplorerTreeItemContextMenuEntryProvider.NEW_OBJECTS_FROM_TEXT_MENU_ENTRY_CONTRIBUTION_ID)
                     .contains(ExplorerTreeItemContextMenuEntryProvider.EXPAND_ALL);
@@ -870,5 +816,170 @@ public class SysONExplorerTests extends AbstractIntegrationTests {
                 .thenCancel()
                 .verify(Duration.ofSeconds(10));
 
+    }
+
+    @DisplayName("GIVEN the SysON Explorer, WHEN displaying an Expression item, THEN the item's label shows the textual representation of the expression")
+    @GivenSysONServer({ ActionTransitionUsagesProjectData.SCRIPT_PATH })
+    @Test
+    public void sysONExplorerTreeExpressionLabelTest() {
+        List<String> defaultFilters = this.explorerDefaultFiltersSearchService.findTreeDefaultFilterIds(ActionTransitionUsagesProjectData.EDITING_CONTEXT_ID, this.sysONExplorerTreeDescriptionId);
+
+        var expandedItemIds = List.of(
+                ActionTransitionUsagesProjectData.SemanticIds.DOCUMENT_ID,
+                ActionTransitionUsagesProjectData.SemanticIds.PACKAGE_1_ID,
+                ActionTransitionUsagesProjectData.SemanticIds.A0_ID,
+                ActionTransitionUsagesProjectData.SemanticIds.S1_ID,
+                ActionTransitionUsagesProjectData.SemanticIds.S2_ID);
+
+        var explorerRepresentationId = this.representationIdBuilder.buildExplorerRepresentationId(this.sysONExplorerTreeDescriptionId, expandedItemIds, defaultFilters);
+        var input = new ExplorerEventInput(UUID.randomUUID(), ActionTransitionUsagesProjectData.EDITING_CONTEXT_ID, explorerRepresentationId);
+        var flux = this.explorerEventSubscriptionRunner.run(input).flux();
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
+        var treeId = new AtomicReference<String>();
+        Consumer<Object> initialTreeContentConsumer = assertRefreshedTreeThat(tree -> {
+            assertThat(tree).isNotNull();
+            treeId.set(tree.getId());
+            assertThat(tree.getChildren()).hasSize(2);
+            var documentItem = tree.getChildren().get(0);
+            assertThat(documentItem.getChildren()).hasSize(1);
+            assertThat(documentItem.getLabel().toString()).isEqualTo("ActionTransitionUsage.sysml");
+            var packageItem = documentItem.getChildren().get(0);
+            assertThat(packageItem.getLabel().toString()).isEqualTo("Package 1");
+            assertThat(packageItem.getChildren()).hasSize(3);
+            var a0Item = packageItem.getChildren().get(0);
+            assertThat(a0Item.getLabel().toString()).isEqualTo("a0");
+            assertThat(a0Item.getChildren()).hasSize(7);
+            var s1Item = a0Item.getChildren().get(5);
+            assertThat(s1Item.getLabel().toString()).isEqualTo("S1");
+            assertThat(s1Item.getChildren()).hasSize(3);
+            var expr1Item = s1Item.getChildren().get(0);
+            assertThat(expr1Item.getKind()).isEqualTo("siriusComponents://semantic?domain=sysml&entity=OperatorExpression");
+            assertThat(expr1Item.getLabel().toString()).isEqualTo("attr1 < 1");
+
+            var s2Item = a0Item.getChildren().get(6);
+            assertThat(s2Item.getLabel().toString()).isEqualTo("S2");
+            assertThat(s2Item.getChildren()).hasSize(3);
+            var expr2Item = s2Item.getChildren().get(0);
+            assertThat(expr2Item.getKind()).isEqualTo("siriusComponents://semantic?domain=sysml&entity=OperatorExpression");
+            assertThat(expr2Item.getLabel().toString()).isEqualTo("attr1 < 0");
+
+        });
+
+        StepVerifier.create(flux)
+                .consumeNextWith(initialTreeContentConsumer)
+                .thenCancel()
+                .verify(Duration.ofSeconds(10));
+    }
+
+    @DisplayName("GIVEN the SysON Explorer, WHEN displaying an Expression item, THEN its internal details are hidden by default")
+    @GivenSysONServer({ ExpressionSamplesProjectData.SCRIPT_PATH })
+    @Test
+    public void sysONExplorerHidesExpressionInternalsByDefault() {
+        List<String> defaultFilters = this.explorerDefaultFiltersSearchService.findTreeDefaultFilterIds(ExpressionSamplesProjectData.EDITING_CONTEXT_ID, this.sysONExplorerTreeDescriptionId);
+
+        var expandedItemIds = ExpressionSamplesProjectData.SemanticIds.ALL_IDS;
+
+        var explorerRepresentationId = this.representationIdBuilder.buildExplorerRepresentationId(this.sysONExplorerTreeDescriptionId, expandedItemIds, defaultFilters);
+        var input = new ExplorerEventInput(UUID.randomUUID(), ExpressionSamplesProjectData.EDITING_CONTEXT_ID, explorerRepresentationId);
+        var flux = this.explorerEventSubscriptionRunner.run(input).flux();
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
+        var treeId = new AtomicReference<String>();
+        Consumer<Object> initialTreeContentConsumer = assertRefreshedTreeThat(tree -> {
+            assertThat(tree).isNotNull();
+            treeId.set(tree.getId());
+            assertThat(tree.getChildren()).hasSize(2);
+            var documentItem = tree.getChildren().get(0);
+            assertThat(documentItem.getChildren()).hasSize(1);
+            assertThat(documentItem.getLabel().toString()).isEqualTo("expressions.sysml");
+            var packageItem = documentItem.getChildren().get(0);
+            assertThat(packageItem.getLabel().toString()).isEqualTo("Expressions");
+
+            assertThat(packageItem.getChildren()).hasSize(6);
+
+            var tankItem = this.getChildByLabel(packageItem, "Tank");
+            assertThat(tankItem).isPresent();
+
+            var maxVolumeAttribute = this.getChildByLabel(tankItem.get(), "maxVolume");
+            assertThat(maxVolumeAttribute).isPresent();
+            assertThat(maxVolumeAttribute.get().getChildren()).hasSize(2);
+            var maxVolumeAttributeValueItem = maxVolumeAttribute.get().getChildren().get(0);
+            assertThat(maxVolumeAttributeValueItem.getLabel().toString()).isEqualTo("100.0 * minVolume");
+            assertThat(maxVolumeAttributeValueItem.getChildren()).isEmpty(); // Details filtered out by default
+
+            var pressureLimitAttribute = this.getChildByLabel(tankItem.get(), "pressureLimit");
+            assertThat(pressureLimitAttribute).isPresent();
+            assertThat(pressureLimitAttribute.get().getChildren()).hasSize(1);
+            var pressureLimitAttributeValueItem = pressureLimitAttribute.get().getChildren().get(0);
+            assertThat(pressureLimitAttributeValueItem.getLabel().toString()).isEqualTo("pressure <= maxPressure");
+            assertThat(pressureLimitAttributeValueItem.getChildren()).isEmpty(); // Details filtered out by default
+
+        });
+
+        StepVerifier.create(flux)
+                .consumeNextWith(initialTreeContentConsumer)
+                .thenCancel()
+                .verify(Duration.ofSeconds(10));
+    }
+
+    @DisplayName("GIVEN the SysON Explorer, WHEN displaying an Expression item, THEN its internal details can be revealed by disabling the corresponding filter")
+    @GivenSysONServer({ ExpressionSamplesProjectData.SCRIPT_PATH })
+    @Test
+    public void sysONExplorerExpressionInternalsCanBeRevealed() {
+        List<String> defaultFilters = this.explorerDefaultFiltersSearchService.findTreeDefaultFilterIds(ExpressionSamplesProjectData.EDITING_CONTEXT_ID, this.sysONExplorerTreeDescriptionId);
+        // Keep all defaults but HIDE_EXPRESSION_INTERNALS_ID
+        List<String> activeFilters = defaultFilters.stream().filter(filterId -> !SysONTreeFilterConstants.HIDE_EXPRESSION_INTERNALS_ID.equals(filterId)).toList();
+
+        var expandedItemIds = ExpressionSamplesProjectData.SemanticIds.ALL_IDS;
+
+        var explorerRepresentationId = this.representationIdBuilder.buildExplorerRepresentationId(this.sysONExplorerTreeDescriptionId, expandedItemIds, activeFilters);
+        var input = new ExplorerEventInput(UUID.randomUUID(), ExpressionSamplesProjectData.EDITING_CONTEXT_ID, explorerRepresentationId);
+        var flux = this.explorerEventSubscriptionRunner.run(input).flux();
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
+        var treeId = new AtomicReference<String>();
+        Consumer<Object> initialTreeContentConsumer = assertRefreshedTreeThat(tree -> {
+            assertThat(tree).isNotNull();
+            treeId.set(tree.getId());
+            assertThat(tree.getChildren()).hasSize(2);
+            var documentItem = tree.getChildren().get(0);
+            assertThat(documentItem.getChildren()).hasSize(1);
+            assertThat(documentItem.getLabel().toString()).isEqualTo("expressions.sysml");
+            var packageItem = documentItem.getChildren().get(0);
+            assertThat(packageItem.getLabel().toString()).isEqualTo("Expressions");
+
+            assertThat(packageItem.getChildren()).hasSize(6);
+
+            var tankItem = this.getChildByLabel(packageItem, "Tank");
+            assertThat(tankItem).isPresent();
+
+            var maxVolumeAttribute = this.getChildByLabel(tankItem.get(), "maxVolume");
+            assertThat(maxVolumeAttribute).isPresent();
+            assertThat(maxVolumeAttribute.get().getChildren()).hasSize(2);
+            var maxVolumeAttributeValueItem = maxVolumeAttribute.get().getChildren().get(0);
+            assertThat(maxVolumeAttributeValueItem.getLabel().toString()).isEqualTo("100.0 * minVolume");
+            assertThat(maxVolumeAttributeValueItem.getChildren()).hasSize(2); // Details visible
+
+            var pressureLimitAttribute = this.getChildByLabel(tankItem.get(), "pressureLimit");
+            assertThat(pressureLimitAttribute).isPresent();
+            assertThat(pressureLimitAttribute.get().getChildren()).hasSize(1);
+            var pressureLimitAttributeValueItem = pressureLimitAttribute.get().getChildren().get(0);
+            assertThat(pressureLimitAttributeValueItem.getLabel().toString()).isEqualTo("pressure <= maxPressure");
+            assertThat(pressureLimitAttributeValueItem.getChildren()).hasSize(2); // Details visible
+
+        });
+
+        StepVerifier.create(flux)
+                .consumeNextWith(initialTreeContentConsumer)
+                .thenCancel()
+                .verify(Duration.ofSeconds(10));
+    }
+
+    private Optional<TreeItem> getChildByLabel(TreeItem parent, String label) {
+        return parent.getChildren().stream().filter(child -> child.getLabel().toString().equals(label)).findFirst();
     }
 }

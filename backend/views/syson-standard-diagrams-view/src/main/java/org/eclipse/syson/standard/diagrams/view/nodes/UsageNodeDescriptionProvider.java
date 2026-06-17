@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.syson.standard.diagrams.view.nodes;
 
+import static org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS;
+
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,17 +30,21 @@ import org.eclipse.sirius.components.view.diagram.NodeToolSection;
 import org.eclipse.syson.diagram.common.view.nodes.AbstractUsageNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.DecisionActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.DoneActionNodeDescriptionProvider;
+import org.eclipse.syson.diagram.common.view.nodes.DoneStateNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.ForkActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.JoinActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.MergeActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.StartActionNodeDescriptionProvider;
+import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
+import org.eclipse.syson.diagram.common.view.nodes.StartStateNodeDescriptionProvider;
 import org.eclipse.syson.standard.diagrams.view.SDVDescriptionNameGenerator;
 import org.eclipse.syson.standard.diagrams.view.SDVDiagramDescriptionProvider;
 import org.eclipse.syson.standard.diagrams.view.services.SDVNodeToolSectionSwitch;
 import org.eclipse.syson.standard.diagrams.view.services.SDVNodeToolsWithoutSectionSwitch;
+import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.util.AQLConstants;
-import org.eclipse.syson.util.AQLUtils;
+import org.eclipse.syson.util.ServiceMethod;
 
 /**
  * Node description provider for all SysMLv2 Usage elements in the General View diagram.
@@ -53,18 +59,19 @@ public class UsageNodeDescriptionProvider extends AbstractUsageNodeDescriptionPr
 
     @Override
     protected String getSemanticCandidatesExpression(String domainType) {
-        return AQLUtils.getSelfServiceCallExpression("getExposedElements",
-                List.of(domainType, org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT));
+        return ServiceMethod.of4(DiagramQueryAQLService.class, DiagramQueryAQLService::getExposedElements, Element.class, EClass.class, List.class, IEditingContext.class, DiagramContext.class)
+                .aqlSelf(domainType, ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT);
     }
 
     @Override
     protected String createPreconditionExpression() {
         // Actors are handled with a different NodeDescription: ActorNodeDescriptionProvider.
-        // Subjects are handled with a different NodeDescription: SubjectDescriptionProvider.
+        // Subjects are handled with a different NodeDescription: SubjectNodeDescriptionProvider.
+        // Stakeholder are handled with a different NodeDescription: StakeholderNodeDescriptionProvider.
         // We can't represent actors with conditional styles because they require to remove inside labels and add
         // outside labels, and set the keepAspectRatio property, which are all defined in the NodeDescription and not in
         // the style.
-        return AQLConstants.AQL + "not self.isActor() and not self.isSubject()";
+        return AQLConstants.AQL + "not self.isActor() and not self.isSubject() and not self.isStakeholder()";
     }
 
     @Override
@@ -130,6 +137,8 @@ public class UsageNodeDescriptionProvider extends AbstractUsageNodeDescriptionPr
         cache.getNodeDescription(this.getDescriptionNameGenerator().getNodeName(ForkActionNodeDescriptionProvider.FORK_ACTION_NAME)).ifPresent(allNodes::add);
         cache.getNodeDescription(this.getDescriptionNameGenerator().getNodeName(MergeActionNodeDescriptionProvider.MERGE_ACTION_NAME)).ifPresent(allNodes::add);
         cache.getNodeDescription(this.getDescriptionNameGenerator().getNodeName(DecisionActionNodeDescriptionProvider.DECISION_ACTION_NAME)).ifPresent(allNodes::add);
+        cache.getNodeDescription(this.getDescriptionNameGenerator().getNodeName(StartStateNodeDescriptionProvider.START_STATE_NAME)).ifPresent(allNodes::add);
+        cache.getNodeDescription(this.getDescriptionNameGenerator().getNodeName(DoneStateNodeDescriptionProvider.DONE_STATE_NAME)).ifPresent(allNodes::add);
         return allNodes;
     }
 

@@ -26,6 +26,8 @@ import java.util.function.Consumer;
 
 import org.eclipse.sirius.components.collaborative.diagrams.dto.DiagramEventInput;
 import org.eclipse.sirius.components.collaborative.diagrams.dto.DiagramRefreshedEventPayload;
+import org.eclipse.sirius.components.collaborative.diagrams.dto.ToolVariable;
+import org.eclipse.sirius.components.collaborative.diagrams.dto.ToolVariableType;
 import org.eclipse.sirius.components.diagrams.tests.graphql.InvokeSingleClickOnDiagramElementToolExecutor;
 import org.eclipse.sirius.components.diagrams.tests.graphql.PaletteQueryRunner;
 import org.eclipse.sirius.components.diagrams.tests.navigation.DiagramNavigator;
@@ -111,8 +113,8 @@ public class IVInterconnectionCompartmentToolsTests extends AbstractIntegrationT
             assertThat(quickToolsLabels).hasSize(4);
             assertThat(quickToolsLabels).containsSequence("Pin", "Adjust size", "Fade", "Hide");
             List<String> paletteEntriesLabels = JsonPath.read(result.data(), "$.data.viewer.editingContext.representation.description.palette.paletteEntries[*].label");
-            assertThat(paletteEntriesLabels).hasSize(5);
-            assertThat(paletteEntriesLabels).containsSequence("Requirements", "Structure", "Show/Hide", "Related Elements", "Edit");
+            assertThat(paletteEntriesLabels).hasSize(6);
+            assertThat(paletteEntriesLabels).containsSequence("Requirements", "Structure", "Show/Hide", "Related Elements", "Edit", "Expression");
 
             List<String> paletteRequirementsSectionToolsLabels = JsonPath.read(result.data(), "$.data.viewer.editingContext.representation.description.palette.paletteEntries[0].tools[*].label");
             assertThat(paletteRequirementsSectionToolsLabels).hasSize(1);
@@ -135,7 +137,7 @@ public class IVInterconnectionCompartmentToolsTests extends AbstractIntegrationT
                 diagramId.get(), List.of(interconnectionCompartmentNodeId.get()), newActionToolId.get(), 0, 0, List.of())
                 .isSuccess();
         Runnable createSatisfyRequirementTool = () -> this.invokeSingleClickOnDiagramElementToolExecutor.execute(InterconnectionViewWithTopNodesTestProjectData.EDITING_CONTEXT_ID,
-                diagramId.get(), List.of(interconnectionCompartmentNodeId.get()), newSatisfyRequirementToolId.get(), 0, 0, List.of())
+                diagramId.get(), List.of(interconnectionCompartmentNodeId.get()), newSatisfyRequirementToolId.get(), 0, 0, List.of(new ToolVariable("selectedObject", "", ToolVariableType.OBJECT_ID)))
                 .isSuccess();
 
         Consumer<Object> afterCreatePartToolConsumer = assertRefreshedDiagramThat(diagram -> {

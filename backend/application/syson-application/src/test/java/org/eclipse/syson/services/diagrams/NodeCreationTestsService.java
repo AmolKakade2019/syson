@@ -18,10 +18,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.sirius.components.collaborative.diagrams.dto.ToolVariable;
+import org.eclipse.sirius.components.collaborative.diagrams.dto.ToolVariableType;
 import org.eclipse.sirius.components.diagrams.Diagram;
 import org.eclipse.syson.application.controllers.diagrams.testers.ToolTester;
 import org.eclipse.syson.util.IDescriptionNameGenerator;
-
 
 /**
  * Service class for CreationTests classes.
@@ -102,6 +102,53 @@ public class NodeCreationTestsService {
     public Runnable createNode(DiagramDescriptionIdProvider diagramDescriptionIdProvider,
             AtomicReference<Diagram> diagram, EClass parentEClass, String targetObjectId, String toolName) {
         return this.createNode(diagramDescriptionIdProvider, diagram, parentEClass, targetObjectId, toolName, List.of());
+    }
+
+    /**
+     * Creates a runnable that invokes a named node creation tool.
+     *
+     * <p>It behaves as if the selection dialog was called without any selection provided.</p>
+     *
+     * @param diagramDescriptionIdProvider
+     *            the diagram description ID provider
+     * @param diagram
+     *            the diagram reference
+     * @param parentEClass
+     *            the EClass of the parent node
+     * @param targetObjectId
+     *            the ID of the element on which apply the tool
+     * @param toolName
+     *            the name of the creation tool
+     * @return a runnable that performs the node creation
+     */
+    public Runnable createNodeWithSelectionDialogWithoutSelectionProvided(DiagramDescriptionIdProvider diagramDescriptionIdProvider,
+            AtomicReference<Diagram> diagram, EClass parentEClass, String targetObjectId, String toolName) {
+        return this.createNodeWithSelectionDialogWithSingleSelection(diagramDescriptionIdProvider, diagram, parentEClass, targetObjectId, toolName, "");
+    }
+
+    /**
+     * Creates a runnable that invokes a named node creation tool.
+     *
+     * <p>It behaves as if the selection dialog was called, and a single selection has been provided.</p>
+     *
+     * @param diagramDescriptionIdProvider
+     *            the diagram description ID provider
+     * @param diagram
+     *            the diagram reference
+     * @param parentEClass
+     *            the EClass of the parent node
+     * @param targetObjectId
+     *            the ID of the element on which apply the tool
+     * @param toolName
+     *            the name of the creation tool
+     * @param selectedObject
+     *            the object id selected in the selection dialog.
+     *            Put an empty string if the selection is optional and you want the behavior without selection
+     * @return a runnable that performs the node creation
+     */
+    public Runnable createNodeWithSelectionDialogWithSingleSelection(DiagramDescriptionIdProvider diagramDescriptionIdProvider,
+            AtomicReference<Diagram> diagram, EClass parentEClass, String targetObjectId, String toolName, String selectedObject) {
+        return this.createNode(diagramDescriptionIdProvider, diagram, parentEClass, targetObjectId, toolName, List.of(new ToolVariable("selectedObject", selectedObject, ToolVariableType.OBJECT_ID)));
     }
 
     /**

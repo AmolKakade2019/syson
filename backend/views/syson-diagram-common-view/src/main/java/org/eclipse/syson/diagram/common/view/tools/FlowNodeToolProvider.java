@@ -13,6 +13,7 @@
 package org.eclipse.syson.diagram.common.view.tools;
 
 import org.eclipse.sirius.components.core.api.IEditingContext;
+import org.eclipse.sirius.components.trees.renderer.TreeRenderer;
 import org.eclipse.sirius.components.view.builder.IViewDiagramElementFinder;
 import org.eclipse.sirius.components.view.builder.generated.diagram.DiagramBuilders;
 import org.eclipse.sirius.components.view.builder.generated.view.ViewBuilders;
@@ -65,13 +66,23 @@ public class FlowNodeToolProvider implements INodeToolProvider {
 
         var selectionDialogTree = this.diagramBuilderHelper.newSelectionDialogTreeDescription()
                 .elementsExpression(ServiceMethod.of1(ViewToolService::getSelectionDialogElements).aql(IEditingContext.EDITING_CONTEXT, "Sequence{" + domainType + "}"))
-                .childrenExpression(ServiceMethod.of1(ViewToolService::getSelectionDialogChildren).aqlSelf("Sequence{" + domainType + "}"))
+                .childrenExpression(ServiceMethod.of3(ViewToolService::getSelectionDialogChildren).aqlSelf(IEditingContext.EDITING_CONTEXT, TreeRenderer.EXPANDED, "Sequence{" + domainType + "}"))
                 .isSelectableExpression(AQLConstants.AQL_SELF + ".oclIsKindOf(" + domainType + ")")
                 .build();
         return this.diagramBuilderHelper.newSelectionDialogDescription()
                 .selectionDialogTreeDescription(selectionDialogTree)
-                .selectionMessage("Select a payload for the new Flow:")
-                .optional(false)
+                .defaultTitleExpression("New Flow")
+                .noSelectionTitleExpression("New Flow")
+                .withSelectionTitleExpression("New Flow")
+                .descriptionExpression("Create an Flow:")
+                .noSelectionActionLabelExpression("Create a new Flow")
+                .noSelectionActionDescriptionExpression("Create a new Flow without Payload")
+                .withSelectionActionLabelExpression("Select a Payload for the new Flow")
+                .withSelectionActionDescriptionExpression("Create a new Flow with a Payload")
+                .noSelectionActionStatusMessageExpression("It will create a new Flow without Payload")
+                .selectionRequiredWithoutSelectionStatusMessageExpression("Select one Element to be added as the new Flow Payload")
+                .selectionRequiredWithSelectionStatusMessageExpression(AQLConstants.AQL + "'It will create an Flow with ' + selectedObjects->first().name + ' as Payload'")
+                .optional(true)
                 .build();
     }
 

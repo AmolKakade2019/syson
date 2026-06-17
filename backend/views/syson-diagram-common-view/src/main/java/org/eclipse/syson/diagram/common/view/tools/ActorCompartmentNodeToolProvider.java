@@ -13,6 +13,7 @@
 package org.eclipse.syson.diagram.common.view.tools;
 
 import org.eclipse.sirius.components.core.api.IEditingContext;
+import org.eclipse.sirius.components.trees.renderer.TreeRenderer;
 import org.eclipse.sirius.components.view.diagram.SelectionDialogDescription;
 import org.eclipse.syson.diagram.common.view.services.ViewCreateService;
 import org.eclipse.syson.diagram.common.view.services.ViewToolService;
@@ -40,13 +41,23 @@ public class ActorCompartmentNodeToolProvider extends AbstractCompartmentNodeToo
 
         var selectionDialogTree = this.diagramBuilderHelper.newSelectionDialogTreeDescription()
                 .elementsExpression(ServiceMethod.of0(ViewToolService::getActorSelectionDialogElements).aql(IEditingContext.EDITING_CONTEXT))
-                .childrenExpression(ServiceMethod.of0(ViewToolService::getActorSelectionDialogChildren).aqlSelf())
+                .childrenExpression(ServiceMethod.of2(ViewToolService::getActorSelectionDialogChildren).aqlSelf(IEditingContext.EDITING_CONTEXT, TreeRenderer.EXPANDED))
                 .isSelectableExpression(AQLConstants.AQL_SELF + ".oclIsKindOf(" + partUsageType + ") or self.oclIsKindOf(" + partDefType + ")")
                 .build();
         return this.diagramBuilderHelper.newSelectionDialogDescription()
                 .selectionDialogTreeDescription(selectionDialogTree)
-                .selectionMessage("Select an existing Part as actor:")
-                .optional(false)
+                .defaultTitleExpression(this.getNodeToolName())
+                .noSelectionTitleExpression(this.getNodeToolName())
+                .withSelectionTitleExpression(this.getNodeToolName())
+                .descriptionExpression("Create an actor:")
+                .noSelectionActionLabelExpression("Create a new actor")
+                .noSelectionActionDescriptionExpression("Create a new actor without specialization")
+                .withSelectionActionLabelExpression("Select an existing Element as actor")
+                .withSelectionActionDescriptionExpression("Create a new specialized actor")
+                .noSelectionActionStatusMessageExpression("It will create a new actor without specialization")
+                .selectionRequiredWithoutSelectionStatusMessageExpression("Select one Element to specialize the new actor")
+                .selectionRequiredWithSelectionStatusMessageExpression(AQLConstants.AQL + "'It will create an actor specialized with ' + selectedObjects->first().name")
+                .optional(true)
                 .build();
     }
 

@@ -26,7 +26,6 @@ import org.eclipse.sirius.components.view.emf.diagram.ViewDiagramDescriptionConv
 import org.eclipse.syson.diagram.common.view.nodes.AbstractCompartmentNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.tools.ObjectiveDocumentationNodeToolProvider;
 import org.eclipse.syson.diagram.common.view.tools.ObjectiveRequirementCompartmentNodeToolProvider;
-import org.eclipse.syson.diagram.common.view.tools.ObjectiveRequirementWithBaseRequirementCompartmentNodeToolProvider;
 import org.eclipse.syson.diagram.services.aql.DiagramMutationAQLService;
 import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.util.IDescriptionNameGenerator;
@@ -72,15 +71,14 @@ public class CaseUsageObjectiveRequirementCompartmentNodeDescriptionProvider ext
 
     @Override
     protected String getDropElementFromDiagramExpression() {
-        return ServiceMethod.of6(DiagramMutationAQLService::dropObjectiveRequirementFromDiagram).aql("droppedElement", "droppedNode", "targetElement", "targetNode", IEditingContext.EDITING_CONTEXT,
-                DiagramContext.DIAGRAM_CONTEXT, ViewDiagramDescriptionConverter.CONVERTED_NODES_VARIABLE);
+        return ServiceMethod.of6(DiagramMutationAQLService::dropObjectiveRequirementFromDiagram).aqlArrow("droppedElements", "droppedNodes", "targetElement", "targetNode",
+                IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT, ViewDiagramDescriptionConverter.CONVERTED_NODES_VARIABLE);
     }
 
     @Override
     protected List<INodeToolProvider> getItemCreationToolProviders() {
         List<INodeToolProvider> creationToolProviders = new ArrayList<>();
         creationToolProviders.add(new ObjectiveRequirementCompartmentNodeToolProvider());
-        creationToolProviders.add(new ObjectiveRequirementWithBaseRequirementCompartmentNodeToolProvider());
         creationToolProviders.add(new ObjectiveDocumentationNodeToolProvider(SysmlPackage.eINSTANCE.getCaseUsage_ObjectiveRequirement()));
         return creationToolProviders;
     }

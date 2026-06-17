@@ -48,6 +48,7 @@ import org.eclipse.sirius.components.graphql.tests.ExecuteEditingContextFunction
 import org.eclipse.sirius.components.graphql.tests.ExecuteEditingContextFunctionRunner;
 import org.eclipse.sirius.components.graphql.tests.ExecuteEditingContextFunctionSuccessPayload;
 import org.eclipse.sirius.components.trees.Tree;
+import org.eclipse.sirius.components.trees.TreeItem;
 import org.eclipse.sirius.components.view.diagram.NodeTool;
 import org.eclipse.sirius.components.view.diagram.SelectionDialogDescription;
 import org.eclipse.sirius.components.view.emf.diagram.IDiagramIdProvider;
@@ -57,6 +58,7 @@ import org.eclipse.sirius.web.tests.services.representation.RepresentationIdBuil
 import org.eclipse.sirius.web.tests.services.selection.SelectionDialogTreeEventSubscriptionRunner;
 import org.eclipse.syson.AbstractIntegrationTests;
 import org.eclipse.syson.GivenSysONServer;
+import org.eclipse.syson.InvalidateStandardLibrariesCache;
 import org.eclipse.syson.application.controllers.diagrams.checkers.CheckDiagramElementCount;
 import org.eclipse.syson.application.controllers.diagrams.checkers.CheckNodeOnDiagram;
 import org.eclipse.syson.application.controllers.diagrams.testers.ToolTester;
@@ -72,6 +74,7 @@ import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.LibraryPackage;
 import org.eclipse.syson.sysml.Namespace;
 import org.eclipse.syson.sysml.SysmlPackage;
+import org.eclipse.syson.tree.explorer.fragments.LibrariesDirectory;
 import org.eclipse.syson.util.IDescriptionNameGenerator;
 import org.eclipse.syson.util.SysONRepresentationDescriptionIdentifiers;
 import org.eclipse.syson.util.ViewConstants;
@@ -96,6 +99,10 @@ import reactor.test.StepVerifier;
 @Transactional
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class GVTopNodeCreationTests extends AbstractIntegrationTests {
+
+    private static final String KERML_SELECTION_DIALOG_ID = UUID.nameUUIDFromBytes("SysON_KerML_Directory".getBytes()).toString();
+
+    private static final String SYSML_SELECTION_DIALOG_ID = UUID.nameUUIDFromBytes("SysON_SysML_Directory".getBytes()).toString();
 
     private final IDescriptionNameGenerator descriptionNameGenerator = new SDVDescriptionNameGenerator();
 
@@ -140,45 +147,45 @@ public class GVTopNodeCreationTests extends AbstractIntegrationTests {
 
     private static Stream<Arguments> topNodeParameters() {
         return Stream.of(
-                Arguments.of(SysmlPackage.eINSTANCE.getAttributeDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getAttributeUsage(), 3, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getAllocationUsage(), 3, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getAllocationDefinition(), 4, 1, 2, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getAcceptActionUsage(), 2, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getActionDefinition(), 6, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getActionUsage(), 7, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getAssignmentActionUsage(), 1, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getComment(), 0, 0, 0, 0, ViewConstants.DEFAULT_NOTE_HEIGHT, ViewConstants.DEFAULT_NOTE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getConcernDefinition(), 8, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getConcernUsage(), 8, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getConstraintDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getConstraintUsage(), 4, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getConnectionDefinition(), 5, 1, 2, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getEnumerationDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getExhibitStateUsage(), 6, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getInterfaceDefinition(), 7, 0, 6, 2, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getInterfaceUsage(), 4, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getItemDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getItemUsage(), 4, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getMetadataDefinition(), 3, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getOccurrenceDefinition(), 3, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getOccurrenceUsage(), 2, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
+                Arguments.of(SysmlPackage.eINSTANCE.getAttributeDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getAttributeUsage(), 3, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getAllocationUsage(), 3, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getAllocationDefinition(), 4, 1, 2, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getAcceptActionUsage(), 2, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getActionDefinition(), 6, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getActionUsage(), 7, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getAssignmentActionUsage(), 1, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getComment(), 0, 0, 0, 0, ViewConstants.DEFAULT_NOTE_HEIGHT, ViewConstants.DEFAULT_NOTE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getConcernDefinition(), 8, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getConcernUsage(), 8, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getConstraintDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getConstraintUsage(), 4, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getConnectionDefinition(), 5, 1, 2, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getEnumerationDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getExhibitStateUsage(), 6, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, true),
+                Arguments.of(SysmlPackage.eINSTANCE.getInterfaceDefinition(), 7, 0, 6, 2, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getInterfaceUsage(), 4, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getItemDefinition(), 2, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getItemUsage(), 4, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getMetadataDefinition(), 3, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getOccurrenceDefinition(), 3, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getOccurrenceUsage(), 2, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
                 // A package doesn't have a compartment: it is handled as a custom node
-                Arguments.of(SysmlPackage.eINSTANCE.getPackage(), 0, 0, 0, 0, ViewConstants.DEFAULT_PACKAGE_NODE_HEIGHT, ViewConstants.DEFAULT_PACKAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getPartDefinition(), 11, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getPartUsage(), 11, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getPortDefinition(), 5, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getPortUsage(), 5, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getReferenceUsage(), 0, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getRequirementDefinition(), 8, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getRequirementUsage(), 8, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getUseCaseDefinition(), 5, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getUseCaseUsage(), 7, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getSatisfyRequirementUsage(), 8, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getStateDefinition(), 6, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH),
-                Arguments.of(SysmlPackage.eINSTANCE.getStateUsage(), 6, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH),
+                Arguments.of(SysmlPackage.eINSTANCE.getPackage(), 0, 0, 0, 0, ViewConstants.DEFAULT_PACKAGE_NODE_HEIGHT, ViewConstants.DEFAULT_PACKAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getPartDefinition(), 11, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getPartUsage(), 11, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getPortDefinition(), 5, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getPortUsage(), 5, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getReferenceUsage(), 0, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getRequirementDefinition(), 9, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getRequirementUsage(), 9, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getUseCaseDefinition(), 5, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getUseCaseUsage(), 7, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getSatisfyRequirementUsage(), 8, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getStateDefinition(), 6, 0, 0, 0, ViewConstants.DEFAULT_DEFINITION_NODE_HEIGHT, ViewConstants.DEFAULT_DEFINITION_NODE_WIDTH, false),
+                Arguments.of(SysmlPackage.eINSTANCE.getStateUsage(), 6, 0, 0, 0, ViewConstants.DEFAULT_USAGE_NODE_HEIGHT, ViewConstants.DEFAULT_USAGE_NODE_WIDTH, false),
                 Arguments.of(SysmlPackage.eINSTANCE.getViewUsage(), 0, 0, 0, 0, ViewConstants.DEFAULT_VIEW_USAGE_NODE_HEIGHT,
-                        ViewConstants.DEFAULT_VIEW_USAGE_NODE_WIDTH)
+                        ViewConstants.DEFAULT_VIEW_USAGE_NODE_WIDTH, false)
         ).map(TestNameGenerator::namedArguments);
     }
 
@@ -195,7 +202,9 @@ public class GVTopNodeCreationTests extends AbstractIntegrationTests {
     @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @ParameterizedTest
     @MethodSource("topNodeParameters")
-    public void createTopNode(EClass eClass, int totalCompartmentCount, int visibleCompartmentCount, int itemsCount, int newBorderNodesCount, int expectedDefaultHeight, int expectedDefaultWidth) {
+    // CHECKSTYLE:OFF
+    public void createTopNode(EClass eClass, int totalCompartmentCount, int visibleCompartmentCount, int itemsCount, int newBorderNodesCount, int expectedDefaultHeight, int expectedDefaultWidth, boolean withSelectionDialog) {
+    // CHECKSTYLE:ON
         var flux = this.givenSubscriptionToDiagram();
 
         AtomicReference<Diagram> diagram = new AtomicReference<>();
@@ -207,7 +216,14 @@ public class GVTopNodeCreationTests extends AbstractIntegrationTests {
 
         String creationToolId = diagramDescriptionIdProvider.getDiagramCreationToolId(this.descriptionNameGenerator.getCreationToolName(eClass));
 
-        Runnable createNodeRunnable = () -> this.nodeCreationTester.invokeTool(GeneralViewEmptyTestProjectData.EDITING_CONTEXT, diagram, creationToolId);
+
+        Runnable createNodeRunnable = () -> {
+            List<ToolVariable> variables = List.of();
+            if (withSelectionDialog) {
+                variables = List.of(new ToolVariable("selectedObject", "", ToolVariableType.OBJECT_ID));
+            }
+            this.nodeCreationTester.invokeTool(GeneralViewEmptyTestProjectData.EDITING_CONTEXT, diagram, null, creationToolId, variables);
+        };
 
         Consumer<Object> diagramCheck = assertRefreshedDiagramThat(newDiagram -> {
             var initialDiagram = diagram.get();
@@ -254,6 +270,7 @@ public class GVTopNodeCreationTests extends AbstractIntegrationTests {
     @DisplayName("GIVEN an empty SysML Project, WHEN New Namespace Import tool on diagram is requested, THEN a new NamespaceImport is created")
     @GivenSysONServer({ GeneralViewEmptyTestProjectData.SCRIPT_PATH })
     @Test
+    @InvalidateStandardLibrariesCache
     public void createTopNamespaceImportNode() {
         var flux = this.givenSubscriptionToDiagram();
 
@@ -347,12 +364,62 @@ public class GVTopNodeCreationTests extends AbstractIntegrationTests {
             var input = new SelectionDialogTreeEventInput(UUID.randomUUID(), GeneralViewEmptyTestProjectData.EDITING_CONTEXT, representationId);
             var treeFlux = this.selectionDialogTreeEventSubscriptionRunner.run(input).flux();
 
-            var hasResourceRootContent = this.getTreeSubscriptionConsumer(tree -> {
-                // 95 is the number of standard libraries
-                assertThat(tree.getChildren()).isNotEmpty().hasSize(95);
+            var hasSelectionDialogRootContent = this.getTreeSubscriptionConsumer(tree -> {
+                assertThat(tree.getChildren()).isNotEmpty();
+
+                TreeItem librariesItem = tree.getChildren().stream()
+                        .filter(treeItem -> LibrariesDirectory.LIBRARIES_DIRECTORY_ID.equals(treeItem.getId()))
+                        .findFirst()
+                        .orElseThrow();
+                assertThat(librariesItem.getLabel().toString()).isEqualTo("Libraries");
+                assertThat(librariesItem.isEditable()).isFalse();
+                assertThat(librariesItem.isDeletable()).isFalse();
+                assertThat(librariesItem.isSelectable()).isFalse();
+                assertThat(librariesItem.isHasChildren()).isTrue();
+
+                assertThat(tree.getChildren()).anySatisfy(treeItem -> {
+                    assertThat(treeItem.getId()).isEqualTo(LibrariesDirectory.LIBRARIES_DIRECTORY_ID);
+                    assertThat(treeItem.getLabel().toString()).isEqualTo("Libraries");
+                });
             });
+
+            var expandedRepresentationId = this.representationIdBuilder.buildSelectionRepresentationId(selectionDialogDescriptionId.get().get(), GeneralViewEmptyTestProjectData.EDITING_CONTEXT,
+                    List.of(LibrariesDirectory.LIBRARIES_DIRECTORY_ID));
+            var expandedInput = new SelectionDialogTreeEventInput(UUID.randomUUID(), GeneralViewEmptyTestProjectData.EDITING_CONTEXT, expandedRepresentationId);
+            var expandedTreeFlux = this.selectionDialogTreeEventSubscriptionRunner.run(expandedInput).flux();
+
+            var hasExpandedLibrariesContent = this.getTreeSubscriptionConsumer(tree -> {
+                TreeItem librariesItem = tree.getChildren().stream()
+                        .filter(treeItem -> LibrariesDirectory.LIBRARIES_DIRECTORY_ID.equals(treeItem.getId()))
+                        .findFirst()
+                        .orElseThrow();
+
+                assertThat(librariesItem.getChildren()).hasSize(2);
+                assertThat(librariesItem.getChildren()).anySatisfy(treeItem -> {
+                    assertThat(treeItem.getId()).isEqualTo(KERML_SELECTION_DIALOG_ID);
+                    assertThat(treeItem.getLabel().toString()).isEqualTo("KerML");
+                    assertThat(treeItem.isEditable()).isFalse();
+                    assertThat(treeItem.isDeletable()).isFalse();
+                    assertThat(treeItem.isSelectable()).isFalse();
+                    assertThat(treeItem.isHasChildren()).isTrue();
+                });
+                assertThat(librariesItem.getChildren()).anySatisfy(treeItem -> {
+                    assertThat(treeItem.getId()).isEqualTo(SYSML_SELECTION_DIALOG_ID);
+                    assertThat(treeItem.getLabel().toString()).isEqualTo("SysML");
+                    assertThat(treeItem.isEditable()).isFalse();
+                    assertThat(treeItem.isDeletable()).isFalse();
+                    assertThat(treeItem.isSelectable()).isFalse();
+                    assertThat(treeItem.isHasChildren()).isTrue();
+                });
+            });
+
             StepVerifier.create(treeFlux)
-                    .consumeNextWith(hasResourceRootContent)
+                    .consumeNextWith(hasSelectionDialogRootContent)
+                    .thenCancel()
+                    .verify(Duration.ofSeconds(10));
+
+            StepVerifier.create(expandedTreeFlux)
+                    .consumeNextWith(hasExpandedLibrariesContent)
                     .thenCancel()
                     .verify(Duration.ofSeconds(10));
         }

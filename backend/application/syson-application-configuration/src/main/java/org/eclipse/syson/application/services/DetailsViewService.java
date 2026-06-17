@@ -39,12 +39,12 @@ import org.eclipse.sirius.components.representations.MessageLevel;
 import org.eclipse.syson.application.configuration.SysMLv2PropertiesConfigurer;
 import org.eclipse.syson.form.services.api.IDetailsViewHelpTextProvider;
 import org.eclipse.syson.services.ImportService;
-import org.eclipse.syson.services.UtilService;
 import org.eclipse.syson.sysml.AcceptActionUsage;
 import org.eclipse.syson.sysml.ActionUsage;
 import org.eclipse.syson.sysml.Annotation;
 import org.eclipse.syson.sysml.Comment;
 import org.eclipse.syson.sysml.ConjugatedPortDefinition;
+import org.eclipse.syson.sysml.Definition;
 import org.eclipse.syson.sysml.Documentation;
 import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.EndFeatureMembership;
@@ -56,10 +56,12 @@ import org.eclipse.syson.sysml.FeatureTyping;
 import org.eclipse.syson.sysml.FeatureValue;
 import org.eclipse.syson.sysml.Import;
 import org.eclipse.syson.sysml.Membership;
+import org.eclipse.syson.sysml.Namespace;
 import org.eclipse.syson.sysml.ParameterMembership;
 import org.eclipse.syson.sysml.ReferenceSubsetting;
 import org.eclipse.syson.sysml.ReferenceUsage;
 import org.eclipse.syson.sysml.Relationship;
+import org.eclipse.syson.sysml.ResultExpressionMembership;
 import org.eclipse.syson.sysml.ReturnParameterMembership;
 import org.eclipse.syson.sysml.StateDefinition;
 import org.eclipse.syson.sysml.StateUsage;
@@ -68,11 +70,10 @@ import org.eclipse.syson.sysml.SysmlFactory;
 import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.sysml.TransitionUsage;
 import org.eclipse.syson.sysml.Type;
+import org.eclipse.syson.sysml.Usage;
 import org.eclipse.syson.sysml.ViewUsage;
 import org.eclipse.syson.sysml.metamodel.services.ElementInitializerSwitch;
-import org.eclipse.syson.sysml.textual.SysMLElementSerializer;
-import org.eclipse.syson.sysml.textual.SysMLSerializingOptions;
-import org.eclipse.syson.sysml.textual.utils.FileNameDeresolver;
+import org.eclipse.syson.sysml.metamodel.services.MetamodelQueryElementService;
 
 /**
  * Java services needed to execute the AQL expressions used in the {@link SysMLv2PropertiesConfigurer}.
@@ -95,9 +96,11 @@ public class DetailsViewService {
 
     private final EEnumLiteral unsetEnumLiteral;
 
-    private final UtilService utilService;
+    private final MetamodelQueryElementService metamodelQueryElementService;
 
-    public DetailsViewService(List<Descriptor> composedAdapterFactoryDescriptors, IFeedbackMessageService feedbackMessageService, IReadOnlyObjectPredicate readOnlyObjectPredicate, List<IDetailsViewHelpTextProvider> detailsViewHelpTextProviders) {
+    public DetailsViewService(List<Descriptor> composedAdapterFactoryDescriptors, IFeedbackMessageService feedbackMessageService, IReadOnlyObjectPredicate readOnlyObjectPredicate,
+            MetamodelQueryElementService metamodelQueryElementService,
+            List<IDetailsViewHelpTextProvider> detailsViewHelpTextProviders) {
         this.composedAdapterFactoryDescriptors = Objects.requireNonNull(composedAdapterFactoryDescriptors);
         this.feedbackMessageService = Objects.requireNonNull(feedbackMessageService);
         this.readOnlyObjectPredicate = Objects.requireNonNull(readOnlyObjectPredicate);
@@ -107,7 +110,7 @@ public class DetailsViewService {
         this.unsetEnumLiteral = EcoreFactory.eINSTANCE.createEEnumLiteral();
         this.unsetEnumLiteral.setName("unset");
         this.unsetEnumLiteral.setLiteral("unset");
-        this.utilService = new UtilService();
+        this.metamodelQueryElementService = Objects.requireNonNull(metamodelQueryElementService);
     }
 
     public String getDetailsViewLabel(Element element, EStructuralFeature eStructuralFeature) {
@@ -570,12 +573,16 @@ public class DetailsViewService {
      *            a {@link FeatureValue} or {@link Feature}
      * @return a {@link FeatureValue} or <code>null</code>
      */
-    public Element getFeatureValue(Element self) {
-        Element result = null;
+    public FeatureValue getFeatureValue(Element self) {
+        FeatureValue result = null;
         if (self instanceof FeatureValue featureValue && featureValue.getValue() != null) {
             result = featureValue;
-        } else if (self instanceof Feature feature && this.utilService.getValuation(feature) != null && this.utilService.getValuation(feature).getValue() != null) {
-            result = this.utilService.getValuation(feature);
+        } else if (self instanceof Feature feature) {
+            result = feature.getOwnedRelationship().stream()
+                    .filter(FeatureValue.class::isInstance)
+                    .map(FeatureValue.class::cast)
+                    .findFirst()
+                    .orElse(null);
         }
         return result;
     }
@@ -589,22 +596,74 @@ public class DetailsViewService {
      */
     public String getValueExpressionTextualRepresentation(FeatureValue featureValue) {
         Expression value = featureValue.getValue();
-        String result = "";
-        if (value != null) {
-            SysMLSerializingOptions options = new SysMLSerializingOptions.Builder()
-                    .lineSeparator("\n")
-                    .nameDeresolver(new FileNameDeresolver())
-                    .indentation("\t")
-                    .needEscapeCharacter(false)
-                    .build();
-            String textualFormat = new SysMLElementSerializer(options, s -> {
-                // Do nothing for now
-            }).doSwitch(value);
-            if (textualFormat != null) {
-                result = textualFormat;
-            }
+        return this.getExpressionAsText(value);
+    }
+
+    /**
+     * Gets the textual representation of the value of an actual {@link Expression}.
+     *
+     * @param expression
+     *            an {@link Expression}
+     * @return a textual representation of the expression (or empty string if none)
+     */
+    public String getExpressionTextualRepresentation(Expression expression) {
+        return this.getExpressionAsText(expression);
+    }
+
+    /**
+     * Gets the textual representation of the value of a {@link ResultExpressionMembership}.
+     *
+     * @param resultExpression
+     *            a {@link ResultExpressionMembership}
+     * @return a textual representation of the value (or empty string if none)
+     */
+    public String getResultExpressionTextualRepresentation(ResultExpressionMembership resultExpression) {
+        Expression value = resultExpression.getOwnedResultExpression();
+        return this.getExpressionAsText(value);
+    }
+
+    /**
+     * Returns the serialized representation of an expression as plain text.
+     *
+     * @param expression
+     *            the Expression
+     * @return the plain text representation of the expression.
+     */
+    private String getExpressionAsText(Expression expression) {
+        return this.metamodelQueryElementService.getExpressionTextualRepresentation(expression);
+    }
+
+    /**
+     * Gets the {@link ResultExpressionMembership} from a {@link Namespace} or a {@link ResultExpressionMembership}.
+     *
+     * @param self
+     *            a {@link Namespace} or a {@link ResultExpressionMembership}.
+     * @return a {@link ResultExpressionMembership} or <code>null</code>
+     */
+    public Element getResultExpression(Element self) {
+        Element result = null;
+        if (self instanceof ResultExpressionMembership expressionMembership && expressionMembership.getOwnedResultExpression() != null) {
+            result = expressionMembership;
+        } else if (self instanceof Namespace namespace && this.metamodelQueryElementService.getResultExpressionMembership(namespace) != null
+                && this.metamodelQueryElementService.getResultExpressionMembership(namespace).getOwnedResultExpression() != null) {
+            result = this.metamodelQueryElementService.getResultExpressionMembership(namespace);
         }
         return result;
+    }
+
+    /**
+     * Gets the {@link ResultExpressionMembership} from a {@link Namespace} or a {@link ResultExpressionMembership}.
+     *
+     * @param self
+     *            a {@link Namespace} or a {@link ResultExpressionMembership}.
+     * @return a {@link ResultExpressionMembership} or <code>null</code>
+     */
+    public Element getExpression(Element self) {
+        if (self instanceof Expression && !(self instanceof Usage) && !(self instanceof Definition)) {
+            return self;
+        } else {
+            return null;
+        }
     }
 
     /**

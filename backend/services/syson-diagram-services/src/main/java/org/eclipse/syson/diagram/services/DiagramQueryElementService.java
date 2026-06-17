@@ -41,7 +41,7 @@ import org.eclipse.syson.sysml.FlowUsage;
 import org.eclipse.syson.sysml.LibraryPackage;
 import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.sysml.ViewUsage;
-import org.eclipse.syson.sysml.helper.EMFUtils;
+import org.eclipse.syson.sysml.metamodel.helper.EMFUtils;
 import org.eclipse.syson.sysml.metamodel.services.MetamodelQueryElementService;
 import org.eclipse.syson.util.NodeFinder;
 import org.springframework.stereotype.Service;
@@ -303,6 +303,11 @@ public class DiagramQueryElementService {
             } else if (element instanceof LibraryPackage) {
                 nodeDescriptionId = EMFUtils.allContainedObjectOfType(optViewDD.get(), org.eclipse.sirius.components.view.diagram.NodeDescription.class)
                         .filter(nodeDesc -> nodeDesc.getName().equals("GV Node " + SysmlPackage.eINSTANCE.getPackage().getName()))
+                        .map(nodeDesc -> this.diagramIdProvider.getId(nodeDesc))
+                        .findFirst();
+            } else if (this.metamodelQueryElementService.isStakeholder(element)) {
+                nodeDescriptionId = EMFUtils.allContainedObjectOfType(optViewDD.get(), org.eclipse.sirius.components.view.diagram.NodeDescription.class)
+                        .filter(nodeDesc -> nodeDesc.getName().equals("GV Node Stakeholder"))
                         .map(nodeDesc -> this.diagramIdProvider.getId(nodeDesc))
                         .findFirst();
             } else {

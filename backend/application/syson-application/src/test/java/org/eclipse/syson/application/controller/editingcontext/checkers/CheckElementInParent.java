@@ -17,13 +17,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.sirius.components.core.api.IEditingContext;
 import org.eclipse.sirius.components.core.api.IObjectSearchService;
 import org.eclipse.syson.sysml.Element;
-import org.eclipse.syson.sysml.helper.EMFUtils;
+import org.eclipse.syson.sysml.metamodel.helper.EMFUtils;
 
 /**
  * Checks that an element exists in the given parent.
@@ -41,6 +42,8 @@ public class CheckElementInParent implements ISemanticChecker {
     private EReference containmentReference;
 
     private EClass eClass;
+
+    private Consumer<Object> additionalCheckOnElement;
 
     public CheckElementInParent(IObjectSearchService objectSearchService, String rootElementId) {
         this.objectSearchService = Objects.requireNonNull(objectSearchService);
@@ -62,6 +65,11 @@ public class CheckElementInParent implements ISemanticChecker {
         return this;
     }
 
+    public CheckElementInParent additionalCheckOnElement(Consumer<Object> additionalCheck) {
+        this.additionalCheckOnElement = additionalCheck;
+        return this;
+    }
+
     @Override
     public void check(IEditingContext editingContext) {
         Object semanticRootObject = this.objectSearchService.getObject(editingContext, this.rootElementId).orElse(null);
@@ -79,6 +87,9 @@ public class CheckElementInParent implements ISemanticChecker {
             });
         } else {
             assertThat(this.eClass.isInstance(referenced)).isTrue();
+        }
+        if (additionalCheckOnElement != null) {
+            additionalCheckOnElement.accept(referenced);
         }
     }
 

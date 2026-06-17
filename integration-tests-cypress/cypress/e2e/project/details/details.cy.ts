@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024, 2025 Obeo.
+ * Copyright (c) 2024, 2026 Obeo.
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v2.0
  * which accompanies this distribution, and is available at
@@ -83,6 +83,31 @@ describe('Details View Tests', () => {
         details.openReferenceWidgetOptions('Specializes');
         details.selectReferenceWidgetOption('Power');
         details.getReferenceWidgetSelectedValue('Specializes', 'Power').should('exist');
+      });
+    });
+    context('When we select an Expression', () => {
+      beforeEach(() => {
+        explorer.select('VehicleMaxSpeed');
+        explorer.expandAll('VehicleMaxSpeed');
+        explorer.select('vehicle.actualSpeed <= maxSpeed');
+      });
+      it("Then the Details view shows the expression's textual value", () => {
+        details.getTextField('Expression value').should('exist');
+        details.getTextField('Expression value').should('have.value', 'vehicle.actualSpeed <= maxSpeed');
+      });
+    });
+
+    context('When we select a ConstraintUsage which contains an Expression', () => {
+      beforeEach(() => {
+        explorer.select('Wheel');
+        explorer.expand('Wheel');
+        explorer.select('boundingBox');
+        explorer.expand('boundingBox');
+        explorer.select('length');
+      });
+      it("Then the Details view shows the child expression's textual value", () => {
+        details.getTextField('Expression value').should('exist');
+        details.getTextField('Expression value').should('have.value', '80 [SI::centimetre]');
       });
     });
   });

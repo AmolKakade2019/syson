@@ -29,8 +29,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.eclipse.syson.sysml.textual.utils.Severity;
-import org.eclipse.syson.sysml.textual.utils.Status;
+import org.eclipse.syson.sysml.metamodel.services.textual.utils.Severity;
+import org.eclipse.syson.sysml.metamodel.services.textual.utils.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -105,7 +105,7 @@ public class SysmlToAst {
             if (sysmlInputPath != null) {
                 sysmlInputPath.toFile().delete();
             }
-            if (this.cliPath == null) {
+            if (this.cliPath == null && sysIdeInputPath != null) {
                 sysIdeInputPath.toFile().delete();
             }
         }

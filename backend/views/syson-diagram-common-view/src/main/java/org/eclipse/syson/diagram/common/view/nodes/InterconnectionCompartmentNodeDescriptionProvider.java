@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.syson.diagram.common.view.nodes;
 
+import static org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,9 +35,11 @@ import org.eclipse.sirius.components.view.diagram.NodeStyleDescription;
 import org.eclipse.sirius.components.view.diagram.NodeToolSection;
 import org.eclipse.sirius.components.view.diagram.SynchronizationPolicy;
 import org.eclipse.sirius.components.view.diagram.UserResizableDirection;
-import org.eclipse.syson.diagram.common.view.services.ViewNodeService;
 import org.eclipse.syson.diagram.common.view.services.description.ToolConstants;
 import org.eclipse.syson.diagram.common.view.tools.ActionFlowCompartmentNodeToolProvider;
+import org.eclipse.syson.diagram.common.view.tools.SatisfyRequirementNodeToolProvider;
+import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
+import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.util.AQLConstants;
 import org.eclipse.syson.util.AQLUtils;
@@ -70,11 +74,10 @@ public class InterconnectionCompartmentNodeDescriptionProvider extends AbstractC
                 .insideLabel(this.createInsideLabelDescription())
                 .isHiddenByDefaultExpression(this.isHiddenByDefaultExpression())
                 .name(this.compartmentName)
-                .preconditionExpression(
-                        AQLUtils.getSelfServiceCallExpression("isView",
-                                List.of(AQLUtils.aqlString(StandardDiagramsConstants.IV_QN), org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS,
-                                        IEditingContext.EDITING_CONTEXT,
-                                        DiagramContext.DIAGRAM_CONTEXT)))
+                .preconditionExpression(ServiceMethod.of4(DiagramQueryAQLService.class, DiagramQueryAQLService::isView, Element.class, String.class, List.class,
+                        IEditingContext.class, DiagramContext.class)
+                        .aqlSelf(AQLUtils.aqlString(StandardDiagramsConstants.IV_QN), ANCESTORS,
+                                IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT))
                 .semanticCandidatesExpression(AQLConstants.AQL_SELF)
                 .style(this.createCompartmentNodeStyle())
                 .userResizable(UserResizableDirection.NONE)
@@ -108,7 +111,7 @@ public class InterconnectionCompartmentNodeDescriptionProvider extends AbstractC
             this.toolDescriptionService.addNodeTool(toolSections, ToolConstants.STRUCTURE,
                     this.toolDescriptionService.createNodeTool(nodeDesc, SysmlPackage.eINSTANCE.getActionUsage()));
             this.toolDescriptionService.addNodeTool(toolSections, ToolConstants.REQUIREMENTS,
-                    this.toolDescriptionService.createNodeTool(nodeDesc, SysmlPackage.eINSTANCE.getSatisfyRequirementUsage()));
+                    new SatisfyRequirementNodeToolProvider().create(cache));
         });
 
         this.toolDescriptionService.removeEmptyNodeToolSections(toolSections);
@@ -168,7 +171,7 @@ public class InterconnectionCompartmentNodeDescriptionProvider extends AbstractC
 
     @Override
     protected String isHiddenByDefaultExpression() {
-        return ServiceMethod.of4(ViewNodeService::isHiddenByDefault).aqlSelf(AQLUtils.aqlString(this.compartmentName), org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS,
+        return ServiceMethod.of4(DiagramQueryAQLService::isHiddenByDefault).aqlSelf(AQLUtils.aqlString(this.compartmentName), ANCESTORS,
                 IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT);
     }
 }

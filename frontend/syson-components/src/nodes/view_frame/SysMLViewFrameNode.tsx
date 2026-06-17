@@ -15,6 +15,7 @@ import {
   ConnectionCreationHandles,
   ConnectionHandles,
   ConnectionTargetHandle,
+  DecoratorContainer,
   Label,
   Resizer,
   useConnectionLineNodeStyle,
@@ -36,21 +37,22 @@ const sysMLViewFrameNodeStyle = (
   hovered: boolean,
   faded: boolean
 ): React.CSSProperties => {
-  const packageContainerStyle: React.CSSProperties = {
+  const frameContainerStyle: React.CSSProperties = {
     display: 'flex',
     padding: '0px',
     width: '100%',
     height: '100%',
+    position: 'relative',
     opacity: faded ? '0.4' : '',
     ...style,
     backgroundColor: 'transparent',
   };
 
   if (selected || hovered) {
-    packageContainerStyle.outline = `${theme.palette.selected} solid 1px`;
+    frameContainerStyle.outline = `${theme.palette.selected} solid 1px`;
   }
 
-  return packageContainerStyle;
+  return frameContainerStyle;
 };
 
 const viewFrameNameCompartmentStyle = (
@@ -61,8 +63,8 @@ const viewFrameNameCompartmentStyle = (
   return {
     display: 'flex',
     position: 'absolute',
-    top: 0,
-    left: 0,
+    top: -1,
+    left: -1,
     width: '70%',
     padding: '4px 8px',
     opacity: faded ? '0.4' : '',
@@ -129,7 +131,8 @@ export const SysMLViewFrameNode: NodeComponentsMap['sysMLViewFrameNode'] = memo(
           onDrop={handleOnDrop}
           data-testid={`SysMLViewFrame - ${data?.insideLabel?.text}`}
           data-svg="rect">
-          {selected ? <ConnectionCreationHandles nodeId={id} /> : null}
+          <DecoratorContainer decorators={data.decorators}></DecoratorContainer>
+          {!!selected ? <ConnectionCreationHandles nodeId={id} /> : null}
           <ConnectionTargetHandle nodeId={id} nodeDescription={data.nodeDescription} isHovered={data.isHovered} />
           <ConnectionHandles connectionHandles={data.connectionHandles} />
           <div

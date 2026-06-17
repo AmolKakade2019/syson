@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Copyright (c) 2023, 2025 Obeo.
+ Copyright (c) 2023, 2026 Obeo.
  This program and the accompanying materials
  are made available under the terms of the Eclipse Public License v2.0
  which accompanies this distribution, and is available at
@@ -16,45 +16,16 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.11</version>
-		<relativePath /> <!-- lookup parent from repository -->
+		<groupId>org.eclipse.syson</groupId>
+		<artifactId>syson</artifactId>
+		<version>2026.5.2</version>
+		<relativePath>../../../pom.xml</relativePath>
 	</parent>
 	<groupId>org.eclipse.syson</groupId>
 	<artifactId>syson-application</artifactId>
-	<version>2026.1.6</version>
+	<version>2026.5.2</version>
 	<name>syson-application</name>
 	<description>SysON Application</description>
-
-	<properties>
-		<java.version>17</java.version>
-		<sirius.web.version>2026.1.6</sirius.web.version>
-	</properties>
-	
-	<repositories>
-		<repository>
-			<id>Central</id>
-			<url>https://repo.maven.apache.org/maven2</url>
-		</repository>
-		<repository>
-			<id>github-sirius-emfjson</id>
-			<url>https://maven.pkg.github.com/eclipse-sirius/sirius-emf-json</url>
-		</repository>
-		<repository>
-			<id>github-sirius-web</id>
-			<name>Apache Maven Packages</name>
-			<url>https://maven.pkg.github.com/eclipse-sirius/sirius-web</url>
-		</repository>
-	</repositories>
-
-	<distributionManagement>
-		<repository>
-			<id>github</id>
-			<name>Apache Maven Packages</name>
-			<url>https://maven.pkg.github.com/eclipse-syson/syson</url>
-		</repository>
-	</distributionManagement>
 
 	<dependencies>
 		<dependency>
@@ -82,62 +53,50 @@
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-sysml-metamodel</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-sysml-metamodel-edit</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-frontend</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-application-configuration</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-sysml-rest-api-services</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-diagram-common-view</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-standard-diagrams-view</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-table-requirements-view</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-tree-explorer-view</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-sysml-import</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-sysml-export</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-sysml-validation</artifactId>
-			<version>2026.1.6</version>
 		</dependency>
 
 		<!-- Test Dependencies -->
@@ -182,24 +141,29 @@
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>postgresql</artifactId>
+			<artifactId>testcontainers-postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>elasticsearch</artifactId>
-            <scope>test</scope>
-        </dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>junit-jupiter</artifactId>
+			<artifactId>testcontainers-elasticsearch</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<!-- Import test jar to access org.eclipse.syson.sysml.util -->
 		<dependency>
 			<groupId>org.eclipse.syson</groupId>
 			<artifactId>syson-sysml-metamodel</artifactId>
-			<version>2026.1.6</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.syson</groupId>
+			<artifactId>syson-sysml-metamodel-services</artifactId>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
@@ -225,7 +189,6 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>3.4.0</version>
 				<configuration>
 					<configLocation>../../releng/syson-resources/checkstyle/CheckstyleConfiguration.xml</configLocation>
 					<includeTestSourceDirectory>true</includeTestSourceDirectory>
@@ -245,7 +208,6 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.13</version>
 				<executions>
 					<execution>
 						<goals>

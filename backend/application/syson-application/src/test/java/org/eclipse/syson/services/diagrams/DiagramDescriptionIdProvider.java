@@ -25,7 +25,7 @@ import org.eclipse.sirius.components.view.diagram.EdgeTool;
 import org.eclipse.sirius.components.view.diagram.NodeDescription;
 import org.eclipse.sirius.components.view.diagram.NodeTool;
 import org.eclipse.sirius.components.view.emf.diagram.IDiagramIdProvider;
-import org.eclipse.syson.sysml.helper.EMFUtils;
+import org.eclipse.syson.sysml.metamodel.helper.EMFUtils;
 
 /**
  * Utility methods used to retrieve identifiers of elements inside a {@link DiagramDescription}.
@@ -53,6 +53,17 @@ public class DiagramDescriptionIdProvider {
                 .map(nodeTool -> UUID.nameUUIDFromBytes(EcoreUtil.getURI(nodeTool).toString().getBytes()).toString())
                 .findFirst();
         assertThat(creationToolId).as(this.shouldExist("Diagram tool " + toolName)).isPresent();
+        return creationToolId.get();
+    }
+
+    public String getGroupNodeToolId(String toolName) {
+        Optional<String> creationToolId = Optional.ofNullable(this.diagramDescription.getGroupPalette())
+                .stream()
+                .flatMap(groupPalette -> EMFUtils.allContainedObjectOfType(groupPalette, NodeTool.class))
+                .filter(nodeTool -> nodeTool.getName().equals(toolName))
+                .map(nodeTool -> UUID.nameUUIDFromBytes(EcoreUtil.getURI(nodeTool).toString().getBytes()).toString())
+                .findFirst();
+        assertThat(creationToolId).as(this.shouldExist("Group tool " + toolName)).isPresent();
         return creationToolId.get();
     }
 

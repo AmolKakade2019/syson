@@ -21,19 +21,29 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.sirius.components.collaborative.dto.CreateChildInput;
 import org.eclipse.sirius.components.collaborative.dto.CreateChildSuccessPayload;
-import org.eclipse.sirius.components.core.api.IEditingContextSearchService;
+import org.eclipse.sirius.components.core.api.ErrorPayload;
 import org.eclipse.sirius.components.core.api.IIdentityService;
+import org.eclipse.sirius.components.core.api.IObjectSearchService;
+import org.eclipse.sirius.components.core.api.IPayload;
 import org.eclipse.sirius.components.emf.services.api.IEMFEditingContext;
+import org.eclipse.sirius.components.graphql.tests.ExecuteEditingContextFunctionInput;
+import org.eclipse.sirius.components.graphql.tests.ExecuteEditingContextFunctionSuccessPayload;
 import org.eclipse.sirius.components.graphql.tests.RepresentationDescriptionsQueryRunner;
+import org.eclipse.sirius.components.graphql.tests.api.IExecuteEditingContextFunctionRunner;
+import org.eclipse.sirius.components.representations.Message;
+import org.eclipse.sirius.components.representations.MessageLevel;
 import org.eclipse.sirius.components.trees.Tree;
 import org.eclipse.sirius.components.trees.TreeItem;
 import org.eclipse.sirius.components.trees.tests.graphql.InitialDirectEditTreeItemLabelQueryRunner;
@@ -50,6 +60,14 @@ import org.eclipse.syson.application.data.ExplorerViewDirectEditTestProjectData;
 import org.eclipse.syson.application.data.GeneralViewEmptyTestProjectData;
 import org.eclipse.syson.application.data.ProjectWithLibraryDependencyContainingLibraryPackageTestProjectData;
 import org.eclipse.syson.application.data.WithUserLibrariesTestProjectData;
+import org.eclipse.syson.sysml.ConcernUsage;
+import org.eclipse.syson.sysml.ConstraintUsage;
+import org.eclipse.syson.sysml.Element;
+import org.eclipse.syson.sysml.FramedConcernMembership;
+import org.eclipse.syson.sysml.LibraryPackage;
+import org.eclipse.syson.sysml.Namespace;
+import org.eclipse.syson.sysml.RequirementConstraintMembership;
+import org.eclipse.syson.sysml.SysmlPackage;
 import org.eclipse.syson.tree.explorer.filters.SysONTreeFilterConstants;
 import org.eclipse.syson.tree.explorer.fragments.LibrariesDirectory;
 import org.eclipse.syson.tree.explorer.fragments.UserLibrariesDirectory;
@@ -62,6 +80,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.transaction.annotation.Transactional;
 
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 /**
@@ -108,11 +127,11 @@ public class ExplorerViewControllerIntegrationTests extends AbstractIntegrationT
             treeItem -> treeItem.getLabel().toString().equals("<Req2> "));
 
     private final TreeItemMatcher userLibraryPackageRW = new TreeItemMatcher(
-            tree -> tree.getChildren().get(0).getChildren().get(2).getChildren().get(0).getChildren().get(0),
+            tree -> this.findTreeItem(tree, WithUserLibrariesTestProjectData.SemanticIds.RW_USER_LIBRARY_PACKAGE_ID).orElseThrow(),
             treeItem -> treeItem.getLabel().toString().equals("Package2"));
 
     private final TreeItemMatcher userLibraryPackageRO = new TreeItemMatcher(
-            tree -> tree.getChildren().get(0).getChildren().get(2).getChildren().get(1).getChildren().get(0),
+            tree -> this.findTreeItem(tree, WithUserLibrariesTestProjectData.SemanticIds.RO_USER_LIBRARY_PACKAGE_ID).orElseThrow(),
             treeItem -> treeItem.getLabel().toString().equals("Package3"));
 
     private final TreeItemMatcher view1GVRepresentation = new TreeItemMatcher(
@@ -123,10 +142,10 @@ public class ExplorerViewControllerIntegrationTests extends AbstractIntegrationT
     private IGivenInitialServerState givenInitialServerState;
 
     @Autowired
-    private IEditingContextSearchService editingContextSearchService;
+    private IIdentityService identityService;
 
     @Autowired
-    private IIdentityService identityService;
+    private IObjectSearchService objectSearchService;
 
     @Autowired
     private ExplorerEventSubscriptionRunner treeEventSubscriptionRunner;
@@ -151,6 +170,9 @@ public class ExplorerViewControllerIntegrationTests extends AbstractIntegrationT
 
     @Autowired
     private TreeItemContextMenuQueryRunner treeItemContextMenuQueryRunner;
+
+    @Autowired
+    private IExecuteEditingContextFunctionRunner executeEditingContextFunctionRunner;
 
     @BeforeEach
     public void beforeEach() {
@@ -278,8 +300,7 @@ public class ExplorerViewControllerIntegrationTests extends AbstractIntegrationT
         };
 
         Consumer<Object> updatedExplorerView = assertRefreshedTreeThat(tree -> {
-            var package2TreeItem = tree.getChildren().get(0).getChildren().get(2).getChildren().get(0).getChildren().get(0);
-            assertThat(package2TreeItem.getId()).isEqualTo(WithUserLibrariesTestProjectData.SemanticIds.RW_USER_LIBRARY_PACKAGE_ID);
+            var package2TreeItem = this.findTreeItem(tree, WithUserLibrariesTestProjectData.SemanticIds.RW_USER_LIBRARY_PACKAGE_ID).orElseThrow();
             assertThat(package2TreeItem.getChildren()).size().isEqualTo(2);
             assertThat(package2TreeItem.getChildren().get(1).getKind()).contains("AcceptActionUsage");
         });
@@ -380,7 +401,8 @@ public class ExplorerViewControllerIntegrationTests extends AbstractIntegrationT
                 SysONTreeFilterConstants.HIDE_SYSML_STANDARD_LIBRARIES_TREE_FILTER_ID,
                 SysONTreeFilterConstants.HIDE_USER_LIBRARIES_TREE_FILTER_ID,
                 SysONTreeFilterConstants.HIDE_ROOT_NAMESPACES_ID,
-                SysONTreeFilterConstants.HIDE_EXPOSE_ELEMENTS_TREE_ITEM_FILTER_ID);
+                SysONTreeFilterConstants.HIDE_EXPOSE_ELEMENTS_TREE_ITEM_FILTER_ID,
+                SysONTreeFilterConstants.HIDE_EXPRESSION_INTERNALS_ID);
     }
 
     @DisplayName("GIVEN the Sirius Explorer View, WHEN querying the filters, THEN no syson filters are returned")
@@ -397,20 +419,146 @@ public class ExplorerViewControllerIntegrationTests extends AbstractIntegrationT
         assertThat(treeFilterIds).isEmpty();
     }
 
-    private List<String> getAllTreeItemIds(String editingContextId) {
-        var optionalEditingContext = this.editingContextSearchService.findById(editingContextId)
-                .filter(IEMFEditingContext.class::isInstance)
-                .map(IEMFEditingContext.class::cast);
-        assertThat(optionalEditingContext).isPresent();
+    @DisplayName("GIVEN the Sirius Explorer View, WHEN creating a constraint inside a requirement, THEN the new constraint is owned through a RequirementConstraintMembership")
+    @GivenSysONServer({ ExplorerViewDirectEditTestProjectData.SCRIPT_PATH })
+    @Test
+    public void testCreateConstraintInRequirement() {
+        var expandedIds = this.getAllTreeItemIds(ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID);
+        var activatedFilters = List.of(SysONTreeFilterConstants.HIDE_ROOT_NAMESPACES_ID);
+        var treeRepresentationId = this.representationIdBuilder.buildExplorerRepresentationId(this.sysONTreeViewDescriptionProvider.getDescriptionId(), expandedIds, activatedFilters);
 
-        var editingContext = optionalEditingContext.get();
-        var expandedIds = new ArrayList<String>();
-        editingContext.getDomain().getResourceSet().getAllContents().forEachRemaining(notifier -> {
-            if (notifier instanceof Resource || notifier instanceof EObject) {
-                expandedIds.add(this.identityService.getId(notifier));
+        var treeEventInput = new ExplorerEventInput(UUID.randomUUID(), ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID, treeRepresentationId);
+        var treeFlux = this.treeEventSubscriptionRunner.run(treeEventInput).flux();
+
+        var newConstraintId = new AtomicReference<String>(null);
+
+        Consumer<Object> ignorePayload = (o) -> {
+            // Ignore the refresh event payload, we will check the actual semantic model content.
+        };
+
+        Runnable createChildConstraint = () -> {
+            var input = new CreateChildInput(UUID.randomUUID(), ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID, ExplorerViewDirectEditTestProjectData.SemanticIds.REQ1_RU_ID,
+                    "SysMLv2EditService-ConstraintUsage");
+            var result = this.createChildMutationRunner.run(input);
+            String typename = JsonPath.read(result.data(), "$.data.createChild.__typename");
+            assertThat(typename).isEqualTo(CreateChildSuccessPayload.class.getSimpleName());
+            String objectId = JsonPath.read(result.data(), "$.data.createChild.object.id");
+            newConstraintId.set(objectId);
+        };
+
+        Runnable checkConstraintOwnership = () -> {
+            var editingContextFunctionInput = new ExecuteEditingContextFunctionInput(UUID.randomUUID(), ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID, (editingContext, input) -> {
+                var optionalConstraint = this.objectSearchService.getObject(editingContext, newConstraintId.get());
+                assertThat(optionalConstraint).containsInstanceOf(ConstraintUsage.class);
+                var constraint = (ConstraintUsage) optionalConstraint.get();
+                assertThat(constraint.getOwningRelationship()).isInstanceOf(RequirementConstraintMembership.class);
+                return new ExecuteEditingContextFunctionSuccessPayload(input.id(), optionalConstraint.get());
+            });
+            Mono<IPayload> result = this.executeEditingContextFunctionRunner.execute(editingContextFunctionInput);
+            var payload = result.block();
+            assertThat(payload).isInstanceOf(ExecuteEditingContextFunctionSuccessPayload.class);
+        };
+
+        StepVerifier.create(treeFlux)
+                .consumeNextWith(ignorePayload)
+                .then(createChildConstraint)
+                .consumeNextWith(ignorePayload)
+                .then(checkConstraintOwnership)
+                .thenCancel()
+                .verify(Duration.ofSeconds(10));
+    }
+
+    @DisplayName("GIVEN the Sirius Explorer View, WHEN creating a concern inside a requirement, THEN the new concern is owned through a FramedConcernMembership")
+    @GivenSysONServer({ ExplorerViewDirectEditTestProjectData.SCRIPT_PATH })
+    @Test
+    public void testCreateConcernInRequirement() {
+        var expandedIds = this.getAllTreeItemIds(ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID);
+        var activatedFilters = List.of(SysONTreeFilterConstants.HIDE_ROOT_NAMESPACES_ID);
+        var treeRepresentationId = this.representationIdBuilder.buildExplorerRepresentationId(this.sysONTreeViewDescriptionProvider.getDescriptionId(), expandedIds, activatedFilters);
+
+        var treeEventInput = new ExplorerEventInput(UUID.randomUUID(), ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID, treeRepresentationId);
+        var treeFlux = this.treeEventSubscriptionRunner.run(treeEventInput).flux();
+
+        var newConcernId = new AtomicReference<String>(null);
+
+        Consumer<Object> ignorePayload = (o) -> {
+            // Ignore the refresh event payload, we will check the actual semantic model content.
+        };
+
+        Runnable createChildConstraint = () -> {
+            var input = new CreateChildInput(UUID.randomUUID(), ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID, ExplorerViewDirectEditTestProjectData.SemanticIds.REQ1_RU_ID,
+                    "SysMLv2EditService-ConcernUsage");
+            var result = this.createChildMutationRunner.run(input);
+            String typename = JsonPath.read(result.data(), "$.data.createChild.__typename");
+            assertThat(typename).isEqualTo(CreateChildSuccessPayload.class.getSimpleName());
+            String objectId = JsonPath.read(result.data(), "$.data.createChild.object.id");
+            newConcernId.set(objectId);
+        };
+
+        Runnable checkConcernOwnership = () -> {
+            var editingContextFunctionInput = new ExecuteEditingContextFunctionInput(UUID.randomUUID(), ExplorerViewDirectEditTestProjectData.EDITING_CONTEXT_ID, (editingContext, input) -> {
+                var optionalConcern = this.objectSearchService.getObject(editingContext, newConcernId.get());
+                assertThat(optionalConcern).containsInstanceOf(ConstraintUsage.class);
+                var concern = (ConcernUsage) optionalConcern.get();
+                assertThat(concern.getOwningRelationship()).isInstanceOf(FramedConcernMembership.class);
+                return new ExecuteEditingContextFunctionSuccessPayload(input.id(), optionalConcern.get());
+            });
+            Mono<IPayload> result = this.executeEditingContextFunctionRunner.execute(editingContextFunctionInput);
+            var payload = result.block();
+            assertThat(payload).isInstanceOf(ExecuteEditingContextFunctionSuccessPayload.class);
+        };
+
+        StepVerifier.create(treeFlux)
+                .consumeNextWith(ignorePayload)
+                .then(createChildConstraint)
+                .consumeNextWith(ignorePayload)
+                .then(checkConcernOwnership)
+                .thenCancel()
+                .verify(Duration.ofSeconds(10));
+    }
+
+    private List<String> getAllTreeItemIds(String editingContextId) {
+        ExecuteEditingContextFunctionInput executeEditingContextFunctionInput = new ExecuteEditingContextFunctionInput(UUID.randomUUID(), editingContextId, (editingContext, input) -> {
+            if (editingContext instanceof IEMFEditingContext emfEditingContext) {
+                List<String> expandedIds = new ArrayList<>();
+                ResourceSet resourceSet = emfEditingContext.getDomain().getResourceSet();
+                List<Resource> resources = resourceSet.getResources().stream().filter(r -> !this.isStandardLibrary(r)).toList();
+                for (Resource resource : resources) {
+                    expandedIds.add(this.identityService.getId(resource));
+                    resource.getAllContents().forEachRemaining(notifier -> {
+                        if (notifier instanceof EObject) {
+                            expandedIds.add(this.identityService.getId(notifier));
+                        }
+                    });
+                }
+                return new ExecuteEditingContextFunctionSuccessPayload(input.id(), expandedIds);
+            } else {
+                return new ErrorPayload(input.id(), List.of(new Message("Invalid editing context", MessageLevel.ERROR)));
             }
         });
-        return expandedIds;
+
+        var payload = this.executeEditingContextFunctionRunner.execute(executeEditingContextFunctionInput).block();
+        assertThat(payload).isInstanceOf(ExecuteEditingContextFunctionSuccessPayload.class);
+        return (List<String>) ((ExecuteEditingContextFunctionSuccessPayload) payload).result();
+    }
+
+    private boolean isStandardLibrary(Resource resource) {
+        var standardLib = resource.getContents().stream()
+                .filter(Namespace.class::isInstance)
+                .map(Namespace.class::cast)
+                .filter(this::isRootNamespace)
+                .flatMap(namespace -> namespace.getOwnedElement().stream())
+                .filter(LibraryPackage.class::isInstance)
+                .map(LibraryPackage.class::cast)
+                .filter(libraryPackage -> libraryPackage.isIsStandard())
+                .findFirst();
+        return standardLib.isPresent();
+    }
+
+    private boolean isRootNamespace(Element element) {
+        return element.eClass() == SysmlPackage.eINSTANCE.getNamespace()
+                && element.getOwner() == null
+                && element.getName() == null;
     }
 
     private Consumer<Object> getTreeRefreshedEventPayloadMatcher(List<TreeItemMatcher> treeItemMatchers) {
@@ -420,6 +568,23 @@ public class ExplorerViewControllerIntegrationTests extends AbstractIntegrationT
                 return treeItemMatcher.treeItemPredicate.test(treeItem);
             });
         });
+    }
+
+    private Optional<TreeItem> findTreeItem(Tree tree, String treeItemId) {
+        return tree.getChildren().stream()
+                .map(child -> this.findTreeItem(child, treeItemId))
+                .flatMap(Optional::stream)
+                .findFirst();
+    }
+
+    private Optional<TreeItem> findTreeItem(TreeItem treeItem, String treeItemId) {
+        if (treeItemId.equals(treeItem.getId())) {
+            return Optional.of(treeItem);
+        }
+        return treeItem.getChildren().stream()
+                .map(child -> this.findTreeItem(child, treeItemId))
+                .flatMap(Optional::stream)
+                .findFirst();
     }
 
     private Runnable triggerDirectEditTreeItemLabel(String editingContextId, String treeId, UUID treeItemId, String expectedLabel) {

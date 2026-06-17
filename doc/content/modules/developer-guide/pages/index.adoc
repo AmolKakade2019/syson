@@ -36,11 +36,11 @@ git config core.eol lf
 ==== Java
 
 All {product} backend modules use Java.
-The current version used by {product} is Java 17.
+The current version used by {product} is Java 21.
 
-You can download Java 17 JDK here: https://adoptium.net/temurin/archive/
+You can download Java 21 JDK here: https://adoptium.net/fr/temurin/releases?version=21&os=any&arch=any
 
-Then, you can test that your favorite shell is using Java 17 by applying this command (from anywhere):
+Then, you can test that your favorite shell is using Java 21 by applying this command (from anywhere):
 [source,shell]
 ----
 java --version
@@ -133,22 +133,22 @@ docker run -p 5433:5432 --rm --name syson-postgres \
 
 It will setup a PostgreSQL instance with the appropriate parameters to locally test the {product} application.
 
-==== Development with Spring Tools 4 for Eclipse
+==== Development with Spring Tools 5 for Eclipse
 
-If you want to develop with Eclipse, you will need Spring Tools 4 for Eclipse.
+If you want to develop with Eclipse, you will need Spring Tools 5 for Eclipse.
 
-You can download Spring Tools 4 for Eclipse here: https://spring.io/tools
+You can download Spring Tools 5 for Eclipse here: https://spring.io/tools#eclipse
 
 Please download the latest version and try to stay up-to-date.
 
-Once launched, please check that your Eclipse is using Java 17. Go to _Window > Preferences_ menu (or _SpringToolSuite4 > Settings_ on macOS) and then _Java > Installed JREs_.
+Once launched, please check that your Eclipse is using Java 21. Go to _Window > Preferences_ menu (or _SpringToolSuite4 > Settings_ on macOS) and then _Java > Installed JREs_.
 
 image::SetupDev_SpringToolSuite_Check_Java.png[Check installed JRE in Spring Tool Suite]
 
 ===== Checkstyle plugin
 
 All {product} backend modules use Checkstyle to verify formatting, coding rules... so you must install Checkstyle plugin in Eclipse.
-The version to use is a version *10.x.y* but *inferior* to *10.22.0*.
+The version to use is the *13.3.0* version.
 
 Go to _Help > Install New Software..._ menu, then add _https://checkstyle.org/eclipse-cs-update-site/_ in the _Work with:_ select widget and type _enter_.
 Then, select _Eclipse Checkstyle Plug-in_, click on _Next >_, _Next >_, accept the terms of the license agreement and click on _Finish_.
@@ -549,6 +549,7 @@ When to use which call:
 
 Type inference:
 - if the compiler says something like _The type X does not define methodName(Object, Object,...)_, add a type witness to the factory so it can match the real signature.
+- if the service method is overloaded, use the factory overload that also takes the service class and Java parameter types to disambiguate the method reference.
 
 Examples:
 
@@ -562,6 +563,9 @@ ServiceMethod.<DiagramMutationAQLService, ViewUsage, String> of1(DiagramMutation
 
 // predicate isActor(Element)
 ServiceMethod.<ModelQueryAQLService, Element> of0(ModelQueryAQLService::isActor).aqlSelf();
+
+// overloaded EObjectServices::eGet(EObject, EStructuralFeature)
+ServiceMethod.of1(EObjectServices.class, EObjectServices::eGet, EObject.class, EStructuralFeature.class).aqlSelf(E_STRUCTURAL_FEATURE);
 ----
 
 [#generate_openapi]

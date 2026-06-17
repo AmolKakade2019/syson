@@ -18,19 +18,27 @@ import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.sirius.components.emf.utils.SiriusEMFCopier;
+import org.eclipse.syson.sysml.ConcernUsage;
+import org.eclipse.syson.sysml.ConstraintUsage;
+import org.eclipse.syson.sysml.Definition;
 import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.FeatureTyping;
+import org.eclipse.syson.sysml.FramedConcernMembership;
 import org.eclipse.syson.sysml.Namespace;
 import org.eclipse.syson.sysml.PartUsage;
 import org.eclipse.syson.sysml.Relationship;
+import org.eclipse.syson.sysml.RequirementConstraintKind;
+import org.eclipse.syson.sysml.RequirementConstraintMembership;
+import org.eclipse.syson.sysml.RequirementDefinition;
 import org.eclipse.syson.sysml.RequirementUsage;
 import org.eclipse.syson.sysml.SatisfyRequirementUsage;
 import org.eclipse.syson.sysml.SysmlFactory;
+import org.eclipse.syson.sysml.Type;
 import org.eclipse.syson.sysml.ViewDefinition;
 import org.eclipse.syson.sysml.ViewUsage;
-import org.eclipse.syson.sysml.helper.EMFUtils;
+import org.eclipse.syson.sysml.metamodel.helper.EMFUtils;
 import org.eclipse.syson.sysml.metamodel.services.MetamodelMutationElementService;
-import org.eclipse.syson.sysml.util.ElementUtil;
+import org.eclipse.syson.sysml.metamodel.util.ElementUtil;
 import org.eclipse.syson.util.GetIntermediateContainerCreationSwitch;
 import org.springframework.stereotype.Service;
 
@@ -195,6 +203,115 @@ public class ModelMutationElementService {
         this.metamodelMutationElementService.initialize(newSatisfyRequirementUsage);
         this.metamodelMutationElementService.initialize(newReferenceSubsetting);
 
+        return newSatisfyRequirementUsage;
+    }
+
+    /**
+     * In a {@link RequirementDefinition}, or a {@link RequirementUsage}, creates {@link FramedConcernMembership} containing a {@link ConcernUsage} subsetted by reference the given concernUsage.
+     *
+     * @param type
+     *         the type that will hold the {@link FramedConcernMembership}, must be a {@link RequirementDefinition}, or a {@link RequirementUsage}
+     * @param concernUsage
+     *         the {@link ConcernUsage} subsetted by reference
+     * @return the created {@link FramedConcernMembership} when type is a {@link RequirementDefinition}, or a {@link RequirementUsage}, {@code null} otherwise
+     */
+    public FramedConcernMembership createFramedConcern(Type type, ConcernUsage concernUsage) {
+        if (type instanceof RequirementDefinition || type instanceof RequirementUsage) {
+            var newFramedConcernMembership = SysmlFactory.eINSTANCE.createFramedConcernMembership();
+            type.getOwnedRelationship().add(newFramedConcernMembership);
+
+            var newConcernUsage = SysmlFactory.eINSTANCE.createConcernUsage();
+            newFramedConcernMembership.getOwnedRelatedElement().add(newConcernUsage);
+
+            this.metamodelMutationElementService.initialize(newFramedConcernMembership);
+            this.metamodelMutationElementService.initialize(newConcernUsage);
+
+            if (concernUsage != null) {
+                var newReferenceSubsetting = SysmlFactory.eINSTANCE.createReferenceSubsetting();
+                newConcernUsage.getOwnedRelationship().add(newReferenceSubsetting);
+                newReferenceSubsetting.setReferencedFeature(concernUsage);
+                this.metamodelMutationElementService.initialize(newReferenceSubsetting);
+            }
+
+            return newFramedConcernMembership;
+        }
+        return null;
+    }
+
+    /**
+     * In a {@link RequirementUsage} or a {@link RequirementDefinition}, creates a {@link RequirementConstraintMembership} containing a {@link ConstraintUsage}.
+     * The {@link RequirementConstraintKind} is used to indicate whether the constraint is {@code required} or {@code assumed}.
+     * If a {@link ConstraintUsage} is given, the {@link RequirementConstraintMembership} owned constraint will be subsetted by the given {@link ConstraintUsage}.
+     *
+     * @param type
+     *          the type that will hold the {@link RequirementConstraintMembership}, {@code type} must be a {@link RequirementDefinition} or a requirementUsage
+     * @param constraintUsage
+     *          the {@link ConstraintUsage} subsetted by reference, can be {@code null}
+     * @param constraintKind
+     *          whether the constraint is {@code required} or {@code assumed}
+     * @return the created {@link RequirementConstraintMembership} when {@code type} is a {@link RequirementDefinition}, or a {@link RequirementUsage}, {@code null} otherwise
+     */
+    public RequirementConstraintMembership createConstraint(Type type, ConstraintUsage constraintUsage, RequirementConstraintKind constraintKind) {
+        if (type instanceof RequirementDefinition || type instanceof RequirementUsage) {
+            var newRequirementConstraintMembership = SysmlFactory.eINSTANCE.createRequirementConstraintMembership();
+            type.getOwnedRelationship().add(newRequirementConstraintMembership);
+            newRequirementConstraintMembership.setKind(constraintKind);
+
+            var newConstraintUsage = SysmlFactory.eINSTANCE.createConstraintUsage();
+            newRequirementConstraintMembership.getOwnedRelatedElement().add(newConstraintUsage);
+
+            this.metamodelMutationElementService.initialize(newRequirementConstraintMembership);
+            this.metamodelMutationElementService.initialize(newConstraintUsage);
+
+            if (constraintUsage != null) {
+                var newReferenceSubsetting = SysmlFactory.eINSTANCE.createReferenceSubsetting();
+                newConstraintUsage.getOwnedRelationship().add(newReferenceSubsetting);
+                newReferenceSubsetting.setReferencedFeature(constraintUsage);
+                this.metamodelMutationElementService.initialize(newReferenceSubsetting);
+            }
+            return newRequirementConstraintMembership;
+        }
+        return null;
+    }
+
+    /**
+     * Creates a {@link SatisfyRequirementUsage SatisfyRequirement} on {@code parentElement}.
+     * <p>
+     *     Depending on the value of {@code selectedObject} the new {@link SatisfyRequirementUsage SatisfyRequirement} will be:
+     *     <ul>
+     *         <li>typed with {@code selectedObject} if the {@code selectedObject} is a {@link Definition}</li>
+     *         <li>subsetted by reference by {@code selectedObject} if the {@code selectedObject} is a {@link RequirementUsage}</li>
+     *         <li>standalone otherwise</li>
+     *     </ul>
+     * </p>
+     *
+     * @param parentElement
+     *            The parent element of the new {@link SatisfyRequirementUsage SatisfyRequirement}
+     * @param selectedObject
+     *            The optionally selected object which will be used to provide additional behavior depending on its value
+     * @return The new created {@link SatisfyRequirementUsage SatisfyRequirement}
+     *
+     * @see ModelMutationElementService#createSatisfy(Element, RequirementUsage)
+     */
+    public SatisfyRequirementUsage createSatisfyRequirement(Element parentElement, Element selectedObject) {
+        // create a new SatisfyRequirementUsage as child of the given Element
+        var newSatisfyRequirementUsage = SysmlFactory.eINSTANCE.createSatisfyRequirementUsage();
+        this.metamodelMutationElementService.addChildInParent(parentElement, newSatisfyRequirementUsage);
+
+        if (selectedObject instanceof Definition definition) {
+            var newFeatureTyping = SysmlFactory.eINSTANCE.createFeatureTyping();
+            newSatisfyRequirementUsage.getOwnedRelationship().add(newFeatureTyping);
+            newFeatureTyping.setType(definition);
+            newFeatureTyping.setTypedFeature(newSatisfyRequirementUsage);
+            this.metamodelMutationElementService.initialize(newFeatureTyping);
+        } else if (selectedObject instanceof RequirementUsage requirementUsage) {
+            var newReferenceSubsetting = SysmlFactory.eINSTANCE.createReferenceSubsetting();
+            newSatisfyRequirementUsage.getOwnedRelationship().add(newReferenceSubsetting);
+            newReferenceSubsetting.setReferencedFeature(requirementUsage);
+            this.metamodelMutationElementService.initialize(newReferenceSubsetting);
+        }
+
+        this.metamodelMutationElementService.initialize(newSatisfyRequirementUsage);
         return newSatisfyRequirementUsage;
     }
 

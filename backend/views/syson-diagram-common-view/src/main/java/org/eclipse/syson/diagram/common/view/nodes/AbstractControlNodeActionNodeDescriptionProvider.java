@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.syson.diagram.common.view.nodes;
 
+import static org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -35,8 +37,8 @@ import org.eclipse.syson.diagram.common.view.services.ViewEdgeToolSwitch;
 import org.eclipse.syson.diagram.services.aql.DiagramMutationAQLService;
 import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
 import org.eclipse.syson.services.DeleteService;
+import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.util.AQLConstants;
-import org.eclipse.syson.util.AQLUtils;
 import org.eclipse.syson.util.IDescriptionNameGenerator;
 import org.eclipse.syson.util.ServiceMethod;
 import org.eclipse.syson.util.SysMLMetamodelHelper;
@@ -99,8 +101,10 @@ public abstract class AbstractControlNodeActionNodeDescriptionProvider extends A
                 .defaultHeightExpression(this.getDefaultHeightExpression())
                 .outsideLabels(this.createOutsideLabelDescription())
                 .name(this.descriptionNameGenerator.getNodeName(this.getNodeDescriptionName()))
-                .semanticCandidatesExpression(AQLUtils.getSelfServiceCallExpression("getExposedElements",
-                        List.of(domainType, org.eclipse.sirius.components.diagrams.description.NodeDescription.ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT)))
+                .semanticCandidatesExpression(ServiceMethod.of4(DiagramQueryAQLService.class,
+                        DiagramQueryAQLService::getExposedElements, Element.class, EClass.class, List.class,
+                        IEditingContext.class, DiagramContext.class)
+                        .aqlSelf(domainType, ANCESTORS, IEditingContext.EDITING_CONTEXT, DiagramContext.DIAGRAM_CONTEXT))
                 .style(this.createNodeStyleDescription())
                 .userResizable(this.isNodeResizable())
                 .synchronizationPolicy(SynchronizationPolicy.SYNCHRONIZED)

@@ -14,12 +14,18 @@ package org.eclipse.syson.model.services.aql;
 
 import java.util.Objects;
 
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.syson.model.services.ModelMutationElementService;
+import org.eclipse.syson.sysml.ConcernUsage;
+import org.eclipse.syson.sysml.ConstraintUsage;
 import org.eclipse.syson.sysml.Documentation;
 import org.eclipse.syson.sysml.Element;
 import org.eclipse.syson.sysml.Membership;
 import org.eclipse.syson.sysml.PartUsage;
+import org.eclipse.syson.sysml.RequirementConstraintKind;
 import org.eclipse.syson.sysml.RequirementUsage;
+import org.eclipse.syson.sysml.Type;
 import org.eclipse.syson.sysml.ViewUsage;
 import org.eclipse.syson.sysml.metamodel.services.MetamodelMutationElementService;
 
@@ -76,10 +82,24 @@ public class ModelMutationAQLService {
     }
 
     /**
-     * {@link ModelMutationElementService#createPartUsageAndFlowConnection(PartUsage)}.
+     * {@link ModelMutationElementService#createSatisfy(Element, RequirementUsage)}.
      */
     public Element createSatisfy(Element element, RequirementUsage existingRequirement) {
         return this.modelMutationElementService.createSatisfy(element, existingRequirement);
+    }
+
+    /**
+     * {@link ModelMutationElementService#createSatisfyRequirement(Element, Element)}.
+     */
+    public Element createSatisfyRequirement(Element self, Element selectedObject) {
+        return this.modelMutationElementService.createSatisfyRequirement(self, selectedObject);
+    }
+
+    /**
+     * {@link MetamodelMutationElementService#createOccurrenceInOccurrence(Type, EClass)}.
+     */
+    public EObject createOccurrenceInOccurrence(Type container, EClass eClass) {
+        return this.metamodelElementMutationService.createOccurrenceInOccurrence(container, eClass);
     }
 
     /**
@@ -87,5 +107,19 @@ public class ModelMutationAQLService {
      */
     public Element setAsView(ViewUsage viewUsage, String newViewDefinition) {
         return this.modelMutationElementService.setAsView(viewUsage, newViewDefinition);
+    }
+
+    /**
+     * {@link ModelMutationElementService#createFramedConcern(Type, ConcernUsage)}.
+     */
+    public Element createFramedConcern(Type type, ConcernUsage concernUsage) {
+        return this.modelMutationElementService.createFramedConcern(type, concernUsage);
+    }
+
+    /**
+     * {@link ModelMutationElementService#createConstraint(Type, ConstraintUsage, RequirementConstraintKind)}.
+     */
+    public Element createConstraint(Type type, ConstraintUsage constraintUsage, RequirementConstraintKind constraintKind) {
+        return this.modelMutationElementService.createConstraint(type, constraintUsage, constraintKind);
     }
 }

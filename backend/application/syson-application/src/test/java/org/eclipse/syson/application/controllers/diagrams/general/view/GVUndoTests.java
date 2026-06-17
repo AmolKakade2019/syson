@@ -43,7 +43,7 @@ import org.eclipse.syson.application.data.GeneralViewEmptyTestProjectData;
 import org.eclipse.syson.services.diagrams.DiagramDescriptionIdProvider;
 import org.eclipse.syson.services.diagrams.api.IGivenDiagramDescription;
 import org.eclipse.syson.services.diagrams.api.IGivenDiagramSubscription;
-import org.eclipse.syson.sysml.helper.LabelConstants;
+import org.eclipse.syson.sysml.metamodel.helper.LabelConstants;
 import org.eclipse.syson.util.SysONRepresentationDescriptionIdentifiers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -136,9 +136,7 @@ public class GVUndoTests extends AbstractIntegrationTests {
 
         Consumer<Object> updatedDiagramAfterPartDeletion = assertRefreshedDiagramThat(diag -> {
             var nodeCount = new DiagramNavigator(diag).findDiagramNodeCount();
-            assertThat(nodeCount).isEqualTo(1); // empty node to help users to start modeling
-            Node node = new DiagramNavigator(diag).nodeWithTargetObjectId(GeneralViewEmptyTestProjectData.SemanticIds.VIEW_USAGE_ID).getNode();
-            assertThat(node).isNotNull();
+            assertThat(nodeCount).isEqualTo(0);
         });
 
         Runnable invokeUndoDeletePartUsage = () -> {

@@ -81,10 +81,10 @@ import org.eclipse.syson.sysml.UseCaseDefinition;
 import org.eclipse.syson.sysml.UseCaseUsage;
 import org.eclipse.syson.sysml.ViewDefinition;
 import org.eclipse.syson.sysml.ViewUsage;
-import org.eclipse.syson.sysml.helper.EMFUtils;
-import org.eclipse.syson.sysml.helper.NameHelper;
+import org.eclipse.syson.sysml.metamodel.helper.EMFUtils;
+import org.eclipse.syson.sysml.metamodel.helper.NameHelper;
 import org.eclipse.syson.sysml.metamodel.services.ElementInitializerSwitch;
-import org.eclipse.syson.sysml.util.ElementUtil;
+import org.eclipse.syson.sysml.metamodel.util.ElementUtil;
 import org.eclipse.syson.util.SysONEContentAdapter;
 
 /**
@@ -238,12 +238,26 @@ public class UtilService {
      *
      * @param eObject
      *            the {@link EObject} stored in a {@link ResourceSet}
-     * @param type
+     * @param eClass
      *            the searched type, represented by its qualified name
      * @return a list of reachable object
      */
     public List<EObject> getAllReachable(EObject eObject, EClass eClass) {
         return this.getAllReachableType(eObject, eClass);
+    }
+
+    /**
+     * Get all reachable elements of the type given by the {@link EClass} in the {@link ResourceSet} of the given type
+     * (represented by its qualified name) without considering elements inside standard libs.
+     *
+     * @param eObject
+     *            the {@link EObject} stored in a {@link ResourceSet}
+     * @param eClass
+     *            the searched type, represented by its qualified name
+     * @return a list of reachable object
+     */
+    public List<EObject> getAllReachableWithoutStandardLibs(EObject eObject, EClass eClass) {
+        return this.getAllReachableType(eObject, eClass, false);
     }
 
     /**
@@ -572,7 +586,7 @@ public class UtilService {
      * @return <code>true</code> if the given element name is a qualified name, <code>false</code> otherwise.
      */
     public boolean isQualifiedName(String elementName) {
-        List<String> segments = NameHelper.parseQualifiedName(elementName);
+        List<String> segments = new NameHelper().parseQualifiedName(elementName);
         return segments.size() > 1;
     }
 
@@ -606,6 +620,18 @@ public class UtilService {
     }
 
     /**
+     * Retrieve the start state defined inside the standard library <code>States</code>.
+     *
+     * @param eObject
+     *            an object to access to the library resources.
+     *
+     * @return the standard start StateUsage defined in the <code>States</code> library.
+     */
+    public StateUsage retrieveStandardStartState(Element eObject) {
+        return this.findByNameAndTypeInStandardLibraries(eObject, StateUsage.class, "States::StateAction::start");
+    }
+
+    /**
      * Retrieve the done action defined inside the standard library <code>Actions</code>.
      *
      * @param eObject
@@ -615,6 +641,18 @@ public class UtilService {
      */
     public ActionUsage retrieveStandardDoneAction(Element eObject) {
         return this.findByNameAndTypeInStandardLibraries(eObject, ActionUsage.class, "Actions::Action::done");
+    }
+
+    /**
+     * Retrieve the done state defined inside the standard library <code>States</code>.
+     *
+     * @param eObject
+     *            an object to access to the library resources.
+     *
+     * @return the standard done StateUsage defined in the <code>States</code> library.
+     */
+    public ActionUsage retrieveStandardDoneState(Element eObject) {
+        return this.findByNameAndTypeInStandardLibraries(eObject, ActionUsage.class, "States::StateAction::done");
     }
 
     private <T extends Element> T findByNameAndTypeInStandardLibraries(Element context, Class<T> klass, String qualifiedName) {
@@ -1021,6 +1059,10 @@ public class UtilService {
         if (Objects.equals(element, this.retrieveStandardStartAction(element))) {
             isUnsynchronized = true;
         } else if (Objects.equals(element, this.retrieveStandardDoneAction(element))) {
+            isUnsynchronized = true;
+        } else if (Objects.equals(element, this.retrieveStandardStartState(element))) {
+            isUnsynchronized = true;
+        } else if (Objects.equals(element, this.retrieveStandardDoneState(element))) {
             isUnsynchronized = true;
         } else if (element instanceof NamespaceImport) {
             isUnsynchronized = true;

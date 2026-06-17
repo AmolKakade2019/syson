@@ -77,18 +77,24 @@ public class ToolTester {
     }
 
     public void invokeTool(String editingContextId, String diagramId, String diagramElementId, String toolId, List<ToolVariable> variables) {
-        var createElementInput = new InvokeSingleClickOnDiagramElementToolInput(
+        this.invokeTool(editingContextId, diagramId, List.of(diagramElementId), toolId, variables);
+    }
+
+    public void invokeTool(String editingContextId, String diagramId, List<String> diagramElementIds, String toolId, List<ToolVariable> variables) {
+        var input = new InvokeSingleClickOnDiagramElementToolInput(
                 UUID.randomUUID(),
                 editingContextId,
                 diagramId,
-                List.of(diagramElementId),
+                diagramElementIds,
                 toolId,
                 0,
                 0,
                 variables);
-        var createElementResult = this.invokeSingleClickOnDiagramElementToolMutationRunner.run(createElementInput);
-        String typename = JsonPath.read(createElementResult.data(), "$.data.invokeSingleClickOnDiagramElementTool.__typename");
+        var result = this.invokeSingleClickOnDiagramElementToolMutationRunner.run(input);
+        String typename = JsonPath.read(result.data(), "$.data.invokeSingleClickOnDiagramElementTool.__typename");
         assertThat(typename).isEqualTo(InvokeSingleClickOnDiagramElementToolSuccessPayload.class.getSimpleName());
+        List<String> messages = JsonPath.read(result.data(), "$.data.invokeSingleClickOnDiagramElementTool.messages[*].body");
+        assertThat(messages).hasSize(0);
     }
 
     public void createNodeOnEdge(String editingContextId, AtomicReference<Diagram> diagram, String selectedEdgeTargetObjectLabel, String toolId) {

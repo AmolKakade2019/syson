@@ -25,10 +25,12 @@ import org.eclipse.sirius.components.view.diagram.NodeDescription;
 import org.eclipse.syson.diagram.common.view.DescriptionFinder;
 import org.eclipse.syson.diagram.common.view.nodes.DecisionActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.DoneActionNodeDescriptionProvider;
+import org.eclipse.syson.diagram.common.view.nodes.DoneStateNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.ForkActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.JoinActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.MergeActionNodeDescriptionProvider;
 import org.eclipse.syson.diagram.common.view.nodes.StartActionNodeDescriptionProvider;
+import org.eclipse.syson.diagram.common.view.nodes.StartStateNodeDescriptionProvider;
 import org.eclipse.syson.sysml.AcceptActionUsage;
 import org.eclipse.syson.sysml.ActionUsage;
 import org.eclipse.syson.sysml.AllocationUsage;
@@ -43,6 +45,7 @@ import org.eclipse.syson.sysml.Package;
 import org.eclipse.syson.sysml.PartDefinition;
 import org.eclipse.syson.sysml.PartUsage;
 import org.eclipse.syson.sysml.PortUsage;
+import org.eclipse.syson.sysml.RequirementDefinition;
 import org.eclipse.syson.sysml.RequirementUsage;
 import org.eclipse.syson.sysml.StateDefinition;
 import org.eclipse.syson.sysml.StateUsage;
@@ -252,6 +255,16 @@ public class ViewEdgeToolSwitch extends SysmlEClassSwitch<List<EdgeTool>> {
     }
 
     @Override
+    public List<EdgeTool> caseRequirementDefinition(RequirementDefinition object) {
+        var edgeTools = new ArrayList<EdgeTool>();
+        edgeTools.add(this.edgeToolService.createFramedConcernEdgeTool());
+        edgeTools.add(this.edgeToolService.createAssumeConstraintEdgeTool());
+        edgeTools.add(this.edgeToolService.createRequireConstraintEdgeTool());
+        edgeTools.addAll(this.caseDefinition(object));
+        return edgeTools;
+    }
+
+    @Override
     public List<EdgeTool> caseRequirementUsage(RequirementUsage object) {
         var edgeTools = new ArrayList<EdgeTool>();
         var targetNodes = this.allNodeDescriptions.stream().filter(nodeDesc -> nodeDesc.getName().toLowerCase().endsWith(USAGE)
@@ -265,6 +278,9 @@ public class ViewEdgeToolSwitch extends SysmlEClassSwitch<List<EdgeTool>> {
                         || this.edgeToolService.isTheNodeDescriptionFor(n, SysmlPackage.eINSTANCE.getUseCaseDefinition()))
                 .toList();
         edgeTools.add(this.edgeToolService.createBecomeObjectiveRequirementEdgeTool(objectiveTargets));
+        edgeTools.add(this.edgeToolService.createFramedConcernEdgeTool());
+        edgeTools.add(this.edgeToolService.createAssumeConstraintEdgeTool());
+        edgeTools.add(this.edgeToolService.createRequireConstraintEdgeTool());
         edgeTools.addAll(this.caseUsage(object));
         return edgeTools;
     }
@@ -279,10 +295,18 @@ public class ViewEdgeToolSwitch extends SysmlEClassSwitch<List<EdgeTool>> {
     @Override
     public List<EdgeTool> caseStateUsage(StateUsage object) {
         var edgeTools = new ArrayList<EdgeTool>();
-        var targetNodes = this.allNodeDescriptions.stream().filter(nodeDesc -> this.descriptionNameGenerator.getNodeName(SysmlPackage.eINSTANCE.getStateUsage()).equals(nodeDesc.getName())).collect(Collectors.toList());
+        var targetNodes = this.allNodeDescriptions.stream()
+                .filter(this::isTransitionEdgeTargetNodeDescription)
+                .collect(Collectors.toList());
         edgeTools.add(this.edgeToolService.createTransitionUsageEdgeTool(SysmlPackage.eINSTANCE.getTransitionUsage(), targetNodes));
         edgeTools.addAll(this.caseUsage(object));
         return edgeTools;
+    }
+
+    private boolean isTransitionEdgeTargetNodeDescription(NodeDescription nodeDesc) {
+        boolean result = this.edgeToolService.isTheNodeDescriptionFor(nodeDesc, SysmlPackage.eINSTANCE.getStateUsage());
+        result = result || this.descriptionNameGenerator.getNodeName(DoneStateNodeDescriptionProvider.DONE_STATE_NAME).equals(nodeDesc.getName());
+        return result;
     }
 
     @Override
@@ -328,6 +352,8 @@ public class ViewEdgeToolSwitch extends SysmlEClassSwitch<List<EdgeTool>> {
         isSpecial = isSpecial || this.descriptionNameGenerator.getNodeName(ForkActionNodeDescriptionProvider.FORK_ACTION_NAME).equals(nodeDesc.getName());
         isSpecial = isSpecial || this.descriptionNameGenerator.getNodeName(MergeActionNodeDescriptionProvider.MERGE_ACTION_NAME).equals(nodeDesc.getName());
         isSpecial = isSpecial || this.descriptionNameGenerator.getNodeName(DecisionActionNodeDescriptionProvider.DECISION_ACTION_NAME).equals(nodeDesc.getName());
+        isSpecial = isSpecial || this.descriptionNameGenerator.getNodeName(StartStateNodeDescriptionProvider.START_STATE_NAME).equals(nodeDesc.getName());
+        isSpecial = isSpecial || this.descriptionNameGenerator.getNodeName(DoneStateNodeDescriptionProvider.DONE_STATE_NAME).equals(nodeDesc.getName());
         return !isSpecial;
     }
 

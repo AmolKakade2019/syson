@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024, 2025 Obeo.
+ * Copyright (c) 2024, 2026 Obeo.
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v2.0
  * which accompanies this distribution, and is available at
@@ -66,6 +66,8 @@ public class GeneralPurposeTests {
     private static final String CHECKSTYLE_NCSS = "@SuppressWarnings(\"checkstyle:JavaNCSS\")";
 
     private static final String CHECKSTYLE_INTERFACE_IS_TYPE = "@SuppressWarnings(\"checkstyle:InterfaceIsType\")";
+
+    private static final String CHECKSTYLE_RAWTYPES_UNCHECKED = "@SuppressWarnings({ \"rawtypes\", \"unchecked\" })";
 
     private static final String NON_NLS = "$NON-NLS-";
 
@@ -223,6 +225,8 @@ public class GeneralPurposeTests {
                 isValidUsage = true;
             } else if (line.contains(CHECKSTYLE_INTERFACE_IS_TYPE)) {
                 isValidUsage = true;
+            } else if (line.contains(CHECKSTYLE_RAWTYPES_UNCHECKED)) {
+                isValidUsage = true;
             }
             if (!isValidUsage) {
                 fail(this.createErrorMessage("@SuppressWarnings", javaFilePath, index));
@@ -232,7 +236,8 @@ public class GeneralPurposeTests {
 
     private void testNoCheckstyleOff(int index, String line, Path javaFilePath) {
         var whitelist = Stream.of(
-                Path.of("ServiceMethod.java")
+                Path.of("ServiceMethod.java"),
+                Path.of("GVTopNodeCreationTests.java")
         );
         if (whitelist.filter(javaFilePath::endsWith).findFirst().isEmpty()) {
             if (line.contains(CHECKSTYLE_OFF)) {

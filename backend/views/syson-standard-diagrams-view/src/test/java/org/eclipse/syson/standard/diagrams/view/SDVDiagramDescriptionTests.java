@@ -30,7 +30,6 @@ import org.eclipse.sirius.components.view.diagram.NodeDescription;
 import org.eclipse.sirius.components.view.emf.IJavaServiceProvider;
 import org.eclipse.syson.diagram.tests.checkers.AQLExpressionCallsExistingServicesChecker;
 import org.eclipse.syson.diagram.tests.checkers.DiagramDescriptionHasDropToolChecker;
-import org.eclipse.syson.diagram.tests.checkers.DiagramDescriptionHasOneEmptyDiagramNodeChecker;
 import org.eclipse.syson.diagram.tests.checkers.EdgeDescriptionHasDirectEditToolChecker;
 import org.eclipse.syson.diagram.tests.checkers.EdgeDescriptionHasReconnectToolChecker;
 import org.eclipse.syson.diagram.tests.checkers.NodeDescriptionHasChildrenChecker;
@@ -43,7 +42,7 @@ import org.eclipse.syson.diagram.tests.checkers.NodeDescriptionReusesChecker;
 import org.eclipse.syson.diagram.tests.predicates.DiagramPredicates;
 import org.eclipse.syson.services.ColorProvider;
 import org.eclipse.syson.sysml.SysmlPackage;
-import org.eclipse.syson.sysml.helper.EMFUtils;
+import org.eclipse.syson.sysml.metamodel.helper.EMFUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -88,7 +87,7 @@ public class SDVDiagramDescriptionTests {
                 // SuccessionAsUsage has a label but the grammar does not support the direct edit tool yet
                 .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getSuccessionAsUsage()).negate())
                 .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getAllocationUsage()).negate())
-                // Use a non editable fixed label
+                // Use a non-editable fixed label
                 .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getIncludeUseCaseUsage()).negate())
                 // TransitionUsage has a label but the grammar does not support the direct edit tool yet
                 .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getTransitionUsage()).negate())
@@ -96,6 +95,10 @@ public class SDVDiagramDescriptionTests {
                 .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getFeatureValue()).negate())
                 // SatisfyRequirementUsage edge has a label (satisfy) but it is a constant and should not be modifiable
                 .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getSatisfyRequirementUsage()).negate())
+                // FramedConcernMembership edge has a label (frame) but it is a constant and should not be modifiable
+                .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getFramedConcernMembership()).negate())
+                // RequirementConstraintMembership edges have a label (assume or require) but they are a constant and should not be modifiable
+                .filter(this.diagramPredicates.hasDomainType(SysmlPackage.eINSTANCE.getRequirementConstraintMembership()).negate())
                 .toList();
         new EdgeDescriptionHasDirectEditToolChecker().checkAll(edgeDescriptionCandidates);
     }
@@ -207,11 +210,5 @@ public class SDVDiagramDescriptionTests {
                 .filter(expression -> expression != null && !expression.isBlank())
                 .collect(Collectors.toSet());
         new AQLExpressionCallsExistingServicesChecker(this.diagramServices).checkAll(aqlExpressions);
-    }
-
-    @Test
-    @DisplayName("Diagram contains an empty diagram node")
-    public void diagramHasOnEmptyDiagramNode() {
-        new DiagramDescriptionHasOneEmptyDiagramNodeChecker().check(this.diagramDescription);
     }
 }

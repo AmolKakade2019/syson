@@ -30,10 +30,10 @@ import org.eclipse.sirius.components.view.diagram.LabelEditTool;
 import org.eclipse.sirius.components.view.diagram.LineStyle;
 import org.eclipse.sirius.components.view.diagram.NodeDescription;
 import org.eclipse.sirius.components.view.diagram.SynchronizationPolicy;
+import org.eclipse.syson.diagram.common.view.services.ViewToolService;
 import org.eclipse.syson.diagram.services.aql.DiagramMutationAQLService;
 import org.eclipse.syson.diagram.services.aql.DiagramQueryAQLService;
 import org.eclipse.syson.util.AQLConstants;
-import org.eclipse.syson.util.AQLUtils;
 import org.eclipse.syson.util.IDescriptionNameGenerator;
 import org.eclipse.syson.util.ServiceMethod;
 import org.eclipse.syson.util.SysMLMetamodelHelper;
@@ -79,8 +79,10 @@ public abstract class AbstractDefinitionOwnedUsageEdgeDescriptionProvider extend
                 .style(this.createEdgeStyle())
                 .synchronizationPolicy(SynchronizationPolicy.SYNCHRONIZED)
                 .targetExpression(AQLConstants.AQL_SELF + "." + this.eReference.getName())
-                .preconditionExpression(AQLConstants.AQL + "not " + org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_SOURCE + ".isAncestorOf("
-                        + org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_TARGET + "," + "cache" + ")")
+                .preconditionExpression(ServiceMethod.of2(DiagramQueryAQLService::isNotAncestorOf)
+                        .aql(org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_SOURCE,
+                                org.eclipse.sirius.components.diagrams.description.EdgeDescription.GRAPHICAL_EDGE_TARGET,
+                                "cache"))
                 .build();
     }
 
@@ -112,7 +114,7 @@ public abstract class AbstractDefinitionOwnedUsageEdgeDescriptionProvider extend
     @Override
     protected DeleteTool getEdgeDeleteTool() {
         var changeContext = this.viewBuilderHelper.newChangeContext()
-                .expression(AQLUtils.getServiceCallExpression("semanticEdgeTarget", "moveToClosestContainingPackage"));
+                .expression(ServiceMethod.of0(ViewToolService::moveToClosestContainingPackage).aql(org.eclipse.sirius.components.diagrams.description.EdgeDescription.SEMANTIC_EDGE_TARGET));
 
         return this.diagramBuilderHelper.newDeleteTool()
                 .name("Delete from Model")

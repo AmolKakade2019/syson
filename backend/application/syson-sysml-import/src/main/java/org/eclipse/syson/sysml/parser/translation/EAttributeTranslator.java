@@ -72,6 +72,10 @@ public class EAttributeTranslator {
             forcedValue = this.handleIsUniqueAttribute(ownerType, astValue);
         } else if (SysmlPackage.eINSTANCE.getImport().isSuperTypeOf(ownerType) && "importsAll".equals(astFeatureName)) {
             this.matchingAttribute = this.getAttribute(ownerType, "isImportAll").orElse(null);
+        } else if ("declaredShortName".equals(astFeatureName)
+                && (SysmlPackage.eINSTANCE.getRequirementUsage().isSuperTypeOf(ownerType)
+                        || SysmlPackage.eINSTANCE.getRequirementDefinition().isSuperTypeOf(ownerType))) {
+            this.matchingAttribute = this.getAttribute(ownerType, "reqId").orElse(null);
         } else if (this.isSpecialBooleanFeature(astFeatureName)) {
             this.matchingAttribute = this.getAttribute(ownerType, astFeatureName).orElse(null);
             forcedValue = this.handleBooleansAsString(astValue, astFeatureName);

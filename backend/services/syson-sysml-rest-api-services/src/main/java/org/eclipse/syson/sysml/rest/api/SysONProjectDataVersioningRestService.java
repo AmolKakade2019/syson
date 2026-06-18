@@ -141,7 +141,7 @@ public class SysONProjectDataVersioningRestService implements IProjectDataVersio
 
     @Override
     public RestBranch deleteBranch(IEditingContext editingContext, UUID branchId) {
-        return this.defaultProjectDataVersioningRestService.getBranchById(editingContext, branchId);
+        return this.defaultProjectDataVersioningRestService.deleteBranch(editingContext, branchId);
     }
 
     protected Optional<String> getProjectId(String editingContextId) {

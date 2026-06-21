@@ -12,6 +12,15 @@ echo ========================================
 echo  SysON Launcher
 echo ========================================
 
+REM Step 0: Verify Docker is running before doing anything else
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ERROR: Docker does not appear to be running.
+    echo Please start Docker Desktop and re-run this script.
+    exit /b 1
+)
+
 REM Step 1: Clean up any leftover containers from previous run
 call :CLEANUP
 

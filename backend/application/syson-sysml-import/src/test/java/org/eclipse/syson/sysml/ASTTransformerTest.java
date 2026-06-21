@@ -692,6 +692,64 @@ public class ASTTransformerTest {
         assertEquals(allocationUsage, allocationUsageFeatureMembership.getMemberElement().getOwningNamespace());
     }
 
+    @DisplayName("Test that declaredShortName on RequirementUsage is mapped to reqId")
+    @Test
+    void convertRequirementUsageReqIdTest() {
+        String fileContent = """
+                {
+                    "$type": "Namespace",
+                    "children": [
+                        {
+                            "$type": "OwningMembership",
+                            "target": {
+                                "$type": "RequirementUsage",
+                                "declaredShortName": "'REQ-001'",
+                                "declaredName": "Brewing Temperature"
+                            }
+                        }
+                    ]
+                }
+                """;
+        Resource result = this.transformer.convertResource(new ByteArrayInputStream(fileContent.getBytes()), new ResourceSetImpl());
+
+        Namespace namespace = (Namespace) result.getContents().get(0);
+        EObject member = namespace.getMember().get(0);
+        assertInstanceOf(RequirementUsage.class, member);
+        RequirementUsage requirementUsage = (RequirementUsage) member;
+        assertEquals("Brewing Temperature", requirementUsage.getDeclaredName());
+        assertEquals("REQ-001", requirementUsage.getReqId());
+        assertEquals("REQ-001", requirementUsage.getDeclaredShortName());
+    }
+
+    @DisplayName("Test that declaredShortName on RequirementDefinition is mapped to reqId")
+    @Test
+    void convertRequirementDefinitionReqIdTest() {
+        String fileContent = """
+                {
+                    "$type": "Namespace",
+                    "children": [
+                        {
+                            "$type": "OwningMembership",
+                            "target": {
+                                "$type": "RequirementDefinition",
+                                "declaredShortName": "'REQDEF-001'",
+                                "declaredName": "Safety"
+                            }
+                        }
+                    ]
+                }
+                """;
+        Resource result = this.transformer.convertResource(new ByteArrayInputStream(fileContent.getBytes()), new ResourceSetImpl());
+
+        Namespace namespace = (Namespace) result.getContents().get(0);
+        EObject member = namespace.getMember().get(0);
+        assertInstanceOf(RequirementDefinition.class, member);
+        RequirementDefinition requirementDefinition = (RequirementDefinition) member;
+        assertEquals("Safety", requirementDefinition.getDeclaredName());
+        assertEquals("REQDEF-001", requirementDefinition.getReqId());
+        assertEquals("REQDEF-001", requirementDefinition.getDeclaredShortName());
+    }
+
     private Resource getResourceFromFile(String testFilePath, boolean noErrorExpected) {
         ResourceSetImpl resourceSet = new ResourceSetImpl();
         // Not the safest way to import libraries but enough for this use case a make the test run faster

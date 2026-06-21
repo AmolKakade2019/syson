@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eclipse SysON – Architectural Overview</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1e2533;
+      background: #f5f7fa;
+    }
+
+    /* ── Layout ── */
+    header {
+      background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%);
+      color: #fff;
+      padding: 3rem 2rem 2.5rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p  { margin-top: 0.6rem; font-size: 1.05rem; opacity: 0.88; }
+    header .badge {
+      display: inline-block;
+      margin-top: 1.2rem;
+      padding: 0.25rem 0.9rem;
+      border: 1.5px solid rgba(255,255,255,0.55);
+      border-radius: 999px;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      opacity: 0.85;
+    }
+
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    nav a {
+      display: block;
+      padding: 0.85rem 1.1rem;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: #3b5a8a;
+      text-decoration: none;
+      border-bottom: 3px solid transparent;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    nav a:hover { color: #1a3a5c; border-bottom-color: #2563a8; }
+
+    main {
+      max-width: 1060px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    /* ── Sections ── */
+    section {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 2rem 2.2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #1a3a5c;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e8eef6;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+    h2 .icon { font-size: 1.2rem; }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #2a4a7a;
+      margin: 1.4rem 0 0.55rem;
+    }
+
+    p { margin-bottom: 0.8rem; color: #374151; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Tech stack table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+      margin-top: 0.6rem;
+    }
+    thead th {
+      background: #eef2f9;
+      color: #1a3a5c;
+      font-weight: 600;
+      padding: 0.65rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid #d1dce8;
+    }
+    tbody tr { border-bottom: 1px solid #edf2f7; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafd; }
+    tbody td { padding: 0.6rem 1rem; color: #374151; vertical-align: top; }
+    tbody td:first-child { font-weight: 500; color: #1e2533; white-space: nowrap; }
+    .tag {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-right: 0.3rem;
+      margin-bottom: 0.2rem;
+    }
+    .tag-blue   { background: #dbeafe; color: #1e40af; }
+    .tag-green  { background: #d1fae5; color: #065f46; }
+    .tag-orange { background: #ffedd5; color: #9a3412; }
+    .tag-purple { background: #ede9fe; color: #5b21b6; }
+    .tag-gray   { background: #f1f5f9; color: #475569; }
+
+    /* ── Module grid ── */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .module-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      background: #fafbfd;
+      transition: box-shadow 0.15s;
+    }
+    .module-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
+    .module-card .module-name {
+      font-size: 0.83rem;
+      font-weight: 700;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      color: #1a3a5c;
+      background: #eef2f9;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+    .module-card p { font-size: 0.9rem; margin-bottom: 0; }
+    .module-card .spring-badge {
+      margin-top: 0.5rem;
+      font-size: 0.76rem;
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 3px;
+    }
+    .allowed    { background: #d1fae5; color: #065f46; }
+    .not-allowed{ background: #fee2e2; color: #991b1b; }
+
+    /* ── Architecture diagram (CSS-drawn) ── */
+    .arch-diagram {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr;
+      gap: 0;
+      align-items: stretch;
+      margin: 1.4rem 0;
+    }
+    .arch-box {
+      border: 2px solid;
+      border-radius: 8px;
+      padding: 1.1rem 1.2rem;
+    }
+    .arch-box.frontend { border-color: #3b82f6; background: #eff6ff; }
+    .arch-box.backend  { border-color: #10b981; background: #ecfdf5; }
+    .arch-box h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .arch-box.frontend h4 { color: #1d4ed8; }
+    .arch-box.backend  h4 { color: #065f46; }
+    .arch-box ul {
+      list-style: none;
+      font-size: 0.88rem;
+      color: #374151;
+    }
+    .arch-box ul li {
+      padding: 0.18rem 0;
+      padding-left: 1.1rem;
+      position: relative;
+    }
+    .arch-box ul li::before {
+      content: "›";
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .arch-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      color: #6b7280;
+      font-size: 0.72rem;
+      text-align: center;
+    }
+    .arch-connector .arrow { font-size: 1.4rem; color: #94a3b8; }
+    .arch-connector span { line-height: 1.3; }
+
+    /* ── Service org table ── */
+    .svc-table { margin-top: 0.8rem; }
+    .svc-table table { font-size: 0.88rem; }
+    .svc-table .yes { color: #065f46; font-weight: 600; }
+    .svc-table .no  { color: #991b1b; font-weight: 600; }
+
+    /* ── Code block ── */
+    pre {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 1rem 1.2rem;
+      font-size: 0.85rem;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      overflow-x: auto;
+      color: #1e2533;
+      line-height: 1.6;
+      margin: 0.8rem 0;
+    }
+    code {
+      font-family: "Cascadia Code", "Consolas", monospace;
+      background: #f1f5f9;
+      padding: 0.1em 0.35em;
+      border-radius: 3px;
+      font-size: 0.88em;
+      color: #be185d;
+    }
+
+    /* ── Layer diagram ── */
+    .layer-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin: 1.2rem 0;
+    }
+    .layer {
+      border-radius: 6px;
+      padding: 0.7rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+    }
+    .layer strong { font-weight: 600; }
+    .layer .layer-desc { font-size: 0.82rem; opacity: 0.8; }
+    .layer-1 { background: #dbeafe; border-left: 4px solid #3b82f6; }
+    .layer-2 { background: #e0e7ff; border-left: 4px solid #6366f1; }
+    .layer-3 { background: #d1fae5; border-left: 4px solid #10b981; }
+    .layer-4 { background: #fef9c3; border-left: 4px solid #eab308; }
+    .layer-5 { background: #ffe4e6; border-left: 4px solid #f43f5e; }
+
+    /* ── Naming convention box ── */
+    .convention-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.8rem;
+    }
+    .convention-card {
+      background: #f8fafd;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      padding: 0.8rem 1rem;
+    }
+    .convention-card .pattern {
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #7c3aed;
+      margin-bottom: 0.3rem;
+    }
+    .convention-card .desc { font-size: 0.87rem; color: #374151; }
+
+    /* ── REST API method badges ── */
+    .endpoint-group { margin-bottom: 2rem; }
+    .endpoint-group:last-child { margin-bottom: 0; }
+    .endpoint-group-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a3a5c;
+      margin: 1.2rem 0 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .endpoint-group-title .delegate {
+      font-size: 0.76rem;
+      font-weight: 500;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      color: #be185d;
+      background: #fdf2f8;
+      border: 1px solid #fbcfe8;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+    }
+    .endpoint-table { font-size: 0.88rem; margin-top: 0.4rem; }
+    .endpoint-table thead th { white-space: nowrap; }
+    .method {
+      display: inline-block;
+      padding: 0.18rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .method-get    { background: #dcfce7; color: #15803d; }
+    .method-post   { background: #dbeafe; color: #1d4ed8; }
+    .method-delete { background: #fee2e2; color: #b91c1c; }
+    .endpoint-path {
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 0.82rem;
+      color: #1e2533;
+      word-break: break-all;
+    }
+    .endpoint-path .path-param { color: #7c3aed; }
+    .api-note {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #f59e0b;
+      border-radius: 6px;
+      padding: 0.85rem 1.1rem;
+      font-size: 0.9rem;
+      color: #374151;
+      margin-top: 1.2rem;
+    }
+    .api-note strong { color: #92400e; }
+    .serializer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.7rem;
+      margin-top: 0.8rem;
+    }
+    .serializer-card {
+      background: #f8fafd;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      padding: 0.75rem 1rem;
+      font-size: 0.88rem;
+      color: #374151;
+    }
+    .serializer-card strong { display: block; color: #1a3a5c; margin-bottom: 0.2rem; font-size: 0.84rem; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.83rem;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 680px) {
+      header h1 { font-size: 1.7rem; }
+      section   { padding: 1.3rem 1.2rem; }
+      .arch-diagram { grid-template-columns: 1fr; }
+      .arch-connector { flex-direction: row; padding: 0.3rem 0; }
+      .arch-connector .arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header>
+  <h1>Eclipse SysON</h1>
+  <p>Architectural Overview — Developer Reference</p>
+  <div class="badge">Version 2026.1.6 &nbsp;·&nbsp; EPL-2.0</div>
+</header>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#stack">Tech Stack</a>
+  <a href="#layers">Layers</a>
+  <a href="#frontend">Frontend</a>
+  <a href="#backend">Backend</a>
+  <a href="#services">Services</a>
+  <a href="#views">Views</a>
+  <a href="#testing">Testing</a>
+  <a href="#restapi">REST API</a>
+  <a href="#build">Build</a>
+</nav>
+
+<main>
+
+  <!-- ══ 1. OVERVIEW ══ -->
+  <section id="overview">
+    <h2><span class="icon">🔭</span> Project Overview</h2>
+    <p>
+      Eclipse SysON is an open-source, <strong>web-based SysML v2 modeling tool</strong>
+      built on the Eclipse Sirius Web platform. It provides graphical, form-based, and tabular
+      editors that allow engineers to create, modify, and visualize system models conforming to
+      the OMG SysML v2 standard.
+    </p>
+    <p>
+      SysON is developed jointly by <strong>Obeo</strong> (product and UX focus) and
+      <strong>CEA</strong> (SysML v2 compliance and OMG representation). It is the core of the
+      SysML v2 editing feature in <em>Papyrus</em> and supports co-design with
+      <em>Eclipse Capella</em>.
+    </p>
+
+    <div class="arch-diagram">
+      <div class="arch-box frontend">
+        <h4>🖥 Browser (Frontend)</h4>
+        <ul>
+          <li>React 18 + TypeScript</li>
+          <li>Apollo Client (GraphQL)</li>
+          <li>Sirius Web component library</li>
+          <li>Vite build &amp; dev server</li>
+          <li>ELK.js layout engine</li>
+        </ul>
+      </div>
+
+      <div class="arch-connector">
+        <span class="arrow">⇄</span>
+        <span>GraphQL<br/>HTTP / WS</span>
+      </div>
+
+      <div class="arch-box backend">
+        <h4>⚙ Server (Backend)</h4>
+        <ul>
+          <li>Java 17 + Spring Boot 3.5</li>
+          <li>Sirius Web 2026.1.6</li>
+          <li>EMF-based SysML v2 metamodel</li>
+          <li>PostgreSQL 15 (persistence)</li>
+          <li>REST API (SysML v2 standard)</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>
+      The application is packaged as a Docker image
+      (<code>eclipsesyson/syson</code>) and runs at
+      <code>http://localhost:8080</code> in the default local setup.
+    </p>
+  </section>
+
+  <!-- ══ 2. TECH STACK ══ -->
+  <section id="stack">
+    <h2><span class="icon">🛠</span> Technology Stack</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+          <th>Version</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Runtime</td>
+          <td><span class="tag tag-orange">Node.js</span></td>
+          <td>22.16.0</td>
+          <td>Frontend build and dev server host</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-orange">Java</span></td>
+          <td>17 (Temurin)</td>
+          <td>Backend application runtime</td>
+        </tr>
+        <tr>
+          <td>UI Framework</td>
+          <td><span class="tag tag-blue">React</span></td>
+          <td>18.3.1</td>
+          <td>Component-based UI</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-blue">TypeScript</span></td>
+          <td>5.4.5</td>
+          <td>Typed JavaScript across the frontend</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-blue">MUI</span></td>
+          <td>7.0.2</td>
+          <td>Material Design component library</td>
+        </tr>
+        <tr>
+          <td>API</td>
+          <td><span class="tag tag-purple">GraphQL</span></td>
+          <td>16.8.1</td>
+          <td>Frontend↔Backend communication (queries, mutations, subscriptions)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-purple">Apollo Client</span></td>
+          <td>3.10.4</td>
+          <td>GraphQL client on the frontend</td>
+        </tr>
+        <tr>
+          <td>Backend Framework</td>
+          <td><span class="tag tag-green">Spring Boot</span></td>
+          <td>3.5.11</td>
+          <td>Application container, DI, REST endpoints</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-green">Sirius Web</span></td>
+          <td>2026.1.6</td>
+          <td>Eclipse modeling platform (views, representations)</td>
+        </tr>
+        <tr>
+          <td>Modeling</td>
+          <td><span class="tag tag-green">EMF</span></td>
+          <td>—</td>
+          <td>SysML v2 metamodel definition and manipulation</td>
+        </tr>
+        <tr>
+          <td>Database</td>
+          <td><span class="tag tag-gray">PostgreSQL</span></td>
+          <td>15</td>
+          <td>Persistent model storage</td>
+        </tr>
+        <tr>
+          <td>Build (frontend)</td>
+          <td><span class="tag tag-orange">Vite</span></td>
+          <td>7.1.1</td>
+          <td>Frontend bundler and dev server</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-orange">Turbo</span></td>
+          <td>2.4.4</td>
+          <td>Monorepo task orchestration with caching</td>
+        </tr>
+        <tr>
+          <td>Build (backend)</td>
+          <td><span class="tag tag-gray">Maven</span></td>
+          <td>3.x</td>
+          <td>Java build, dependency management, and test runner</td>
+        </tr>
+        <tr>
+          <td>Testing</td>
+          <td><span class="tag tag-blue">Vitest</span></td>
+          <td>3.2.4</td>
+          <td>Frontend unit tests</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-blue">Playwright</span></td>
+          <td>1.57.0</td>
+          <td>E2E browser tests (primary)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-blue">JUnit / Mockito</span></td>
+          <td>—</td>
+          <td>Backend unit and integration tests</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="tag tag-blue">JaCoCo</span></td>
+          <td>—</td>
+          <td>Backend code coverage with CI gates</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══ 3. LAYERS ══ -->
+  <section id="layers">
+    <h2><span class="icon">🗂</span> Architectural Layers</h2>
+    <p>
+      SysON follows a layered architecture where each layer has a clearly defined responsibility
+      and dependency direction — inner layers have <em>no knowledge</em> of outer layers.
+    </p>
+
+    <div class="layer-stack">
+      <div class="layer layer-1">
+        <strong>🖥 Browser UI</strong>
+        <span class="layer-desc">React components, Sirius Web widgets, GraphQL subscriptions</span>
+      </div>
+      <div class="layer layer-2">
+        <strong>📡 GraphQL API</strong>
+        <span class="layer-desc">Spring GraphQL — queries, mutations, subscriptions; REST API (SysML v2 standard)</span>
+      </div>
+      <div class="layer layer-3">
+        <strong>🧩 View / Representation Layer</strong>
+        <span class="layer-desc">Sirius Web view descriptions — diagram nodes, edges, tables, trees, forms</span>
+      </div>
+      <div class="layer layer-4">
+        <strong>⚙ Service Layer</strong>
+        <span class="layer-desc">Business logic organized by concern (diagram, table, tree, form, model)</span>
+      </div>
+      <div class="layer layer-5">
+        <strong>🔷 SysML v2 Metamodel</strong>
+        <span class="layer-desc">EMF-based model objects — no Spring, no Sirius dependencies</span>
+      </div>
+    </div>
+
+    <p>
+      Data flows from the browser via GraphQL into the Spring handler layer, which delegates to
+      view descriptions and service classes. Services that mutate the model ultimately operate on
+      EMF model objects persisted through Sirius Web's storage layer into PostgreSQL.
+    </p>
+  </section>
+
+  <!-- ══ 4. FRONTEND ══ -->
+  <section id="frontend">
+    <h2><span class="icon">🖥</span> Frontend Structure</h2>
+    <p>
+      The frontend is an npm workspace managed with <strong>Turbo</strong> for task orchestration.
+      It contains two packages under <code>frontend/</code>:
+    </p>
+
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="module-name">@eclipse-syson/syson</div>
+        <p>The main React application (private, not published). Contains the application shell, routing, and all page-level views. Built with Vite.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-name">@eclipse-syson/syson-components</div>
+        <p>Reusable component library published to the GitHub npm registry. Used by the main app and may be consumed externally.</p>
+      </div>
+    </div>
+
+    <h3>Key Frontend Dependencies</h3>
+    <table>
+      <thead><tr><th>Dependency</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>@eclipse-sirius/sirius-components-*</code></td><td>Diagram, form, tree, table, and other representation widgets from the Sirius Web platform</td></tr>
+        <tr><td><code>@apollo/client</code></td><td>GraphQL query/mutation/subscription management</td></tr>
+        <tr><td><code>@xyflow/react</code></td><td>Graph rendering engine used for diagrams</td></tr>
+        <tr><td><code>elkjs</code></td><td>ELK layout algorithm for automatic diagram layout</td></tr>
+        <tr><td><code>d3</code></td><td>Supplementary data visualization utilities</td></tr>
+        <tr><td><code>lexical</code></td><td>Rich-text / direct-edit input editor</td></tr>
+        <tr><td><code>react-router-dom</code></td><td>Client-side routing (v6)</td></tr>
+        <tr><td><code>@mui/material</code></td><td>Material UI component library for layout and controls</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Communication with Backend</h3>
+    <p>
+      The frontend communicates <em>exclusively</em> via GraphQL — there are no direct REST calls
+      for model data. Subscriptions (WebSocket) are used for real-time diagram and representation
+      updates. The SysML v2 standard REST API is a backend-only concern exposed for external tool
+      integration.
+    </p>
+  </section>
+
+  <!-- ══ 5. BACKEND ══ -->
+  <section id="backend">
+    <h2><span class="icon">⚙</span> Backend Module Structure</h2>
+    <p>
+      The backend is a Maven multi-module project. Modules are grouped into five top-level
+      directories under <code>backend/</code>:
+    </p>
+
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="module-name">application/</div>
+        <p>Spring Boot entry point (<code>syson-application</code>), configuration, static frontend resource serving, and application-level wiring.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-name">metamodel/</div>
+        <p>EMF-based SysML v2 metamodel (<code>syson-sysml-metamodel</code>) and its generated edit support. This is the innermost layer — no Spring or Sirius deps.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-name">services/</div>
+        <p>All business logic, strictly organized by concern. See the <a href="#services">Service Layer</a> section for the full breakdown.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-name">views/</div>
+        <p>Sirius Web view description providers — Java code that programmatically defines diagram nodes, edges, compartments, tables, and trees.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-name">tests/</div>
+        <p>Centralized backend test modules with shared fixtures and integration test support.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-name">releng/</div>
+        <p>Release engineering: JaCoCo aggregate coverage module (<code>syson-test-coverage</code>), resource indexing, and license management.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 6. SERVICES ══ -->
+  <section id="services">
+    <h2><span class="icon">🔧</span> Service Layer Organization</h2>
+    <p>
+      Following <strong>ADR-002</strong>, services are organized by their concern and their
+      allowed dependency set. This prevents framework concerns from leaking into the core metamodel
+      and makes it easy to find where a given operation should live.
+    </p>
+
+    <div class="svc-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Responsibility</th>
+            <th>Spring / Sirius Web allowed?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>syson-sysml-metamodel-services</code></td>
+            <td>Pure model query &amp; mutation — EMF operations only (Usage, Definition categories)</td>
+            <td><span class="no">✗ No</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-model-services</code></td>
+            <td>Model operations through Sirius Web (Create, Delete, Move, DragAndDrop)</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-diagram-services</code></td>
+            <td>Diagram-specific query &amp; mutation (GeneralView, InterconnectionView, labels, direct edit)</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-table-services</code></td>
+            <td>Table-specific query &amp; mutation (rows, columns, cells — RequirementsView)</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-tree-services</code></td>
+            <td>Tree-specific query &amp; mutation</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-form-services</code></td>
+            <td>Form-specific query &amp; mutation (widget values, validation)</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-representation-services</code></td>
+            <td>Cross-cutting services shared across all representation types</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-sysml-rest-api-services</code></td>
+            <td>OMG SysML v2 standard REST API implementation</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td><code>syson-direct-edit-grammar</code></td>
+            <td>ANTLR grammar and parser for direct-edit expressions</td>
+            <td><span class="yes">✓ Yes</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Class Naming Conventions</h3>
+    <p>
+      Service classes within each module follow a strict naming pattern that encodes both the
+      representation type and the operation direction:
+    </p>
+
+    <div class="convention-grid">
+      <div class="convention-card">
+        <div class="pattern">XXXQueryService</div>
+        <div class="desc">Read-only operations on representation type XXX</div>
+      </div>
+      <div class="convention-card">
+        <div class="pattern">XXXMutationService</div>
+        <div class="desc">Write operations on representation type XXX</div>
+      </div>
+      <div class="convention-card">
+        <div class="pattern">XXXQueryYYYService</div>
+        <div class="desc">Read operations focused on a specific sub-concern (e.g. <code>DiagramQueryLabelService</code>)</div>
+      </div>
+      <div class="convention-card">
+        <div class="pattern">XXXMutationYYYService</div>
+        <div class="desc">Write operations on a specific sub-concern</div>
+      </div>
+      <div class="convention-card" style="border-color: #c4b5fd; background: #f5f3ff;">
+        <div class="pattern" style="color: #6d28d9;">XXXQueryAQLService</div>
+        <div class="desc"><strong>AQL entry point only.</strong> Delegates to Query services — contains no logic of its own</div>
+      </div>
+      <div class="convention-card" style="border-color: #c4b5fd; background: #f5f3ff;">
+        <div class="pattern" style="color: #6d28d9;">XXXMutationAQLService</div>
+        <div class="desc"><strong>AQL entry point only.</strong> Delegates to Mutation services — contains no logic of its own</div>
+      </div>
+    </div>
+
+    <p style="margin-top:1rem;">
+      Each module exposes exactly <strong>two AQL-facing classes</strong>
+      (<code>*QueryAQLService</code> and <code>*MutationAQLService</code>). These are the
+      <em>only</em> classes that AQL expressions in view descriptions are allowed to call.
+      All other service classes are called from Java code only.
+    </p>
+  </section>
+
+  <!-- ══ 7. VIEWS ══ -->
+  <section id="views">
+    <h2><span class="icon">🗺</span> Views Layer</h2>
+    <p>
+      The <code>backend/views/</code> directory contains Sirius Web
+      <strong>view description providers</strong> — Java classes that programmatically build the
+      configuration of each representation editor. There is no DSL file or model-based view
+      description; the entire view is defined in Java code.
+    </p>
+
+    <h3>Representation Types</h3>
+    <table>
+      <thead><tr><th>View Module</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>General View (GV)</td><td>The primary structural diagram showing parts, ports, connections, and packages</td></tr>
+        <tr><td>Interconnection View (ICV)</td><td>Connection-focused view for interface and binding connector relationships</td></tr>
+        <tr><td>Action Flow View (AFV)</td><td>Action and control flow diagrams</td></tr>
+        <tr><td>State Transition View (STV)</td><td>State machine diagrams</td></tr>
+        <tr><td>Requirements View</td><td>Tabular representation for requirements management</td></tr>
+        <tr><td>syson-common-view</td><td>Shared view utilities and the <code>IViewDescriptionProvider</code> API</td></tr>
+        <tr><td>syson-diagram-common-view</td><td>Abstract base providers for nodes, edges, and compartments shared across diagram types</td></tr>
+      </tbody>
+    </table>
+
+    <h3>View Provider Pattern</h3>
+    <p>
+      Each visual element (node type, edge type, compartment) has a dedicated
+      <code>*DescriptionProvider</code> class. These providers implement
+      <code>IViewDescriptionProvider</code> and are picked up by Spring as beans.
+      Common base classes in <code>syson-diagram-common-view</code> provide default behavior:
+    </p>
+    <pre>AbstractNodeDescriptionProvider
+  └── AbstractDefinitionNodeDescriptionProvider
+  └── AbstractUsageNodeDescriptionProvider
+  └── AbstractCompartmentNodeDescriptionProvider
+
+AbstractEdgeDescriptionProvider
+  └── AbstractAllocateEdgeDescriptionProvider
+  └── AbstractDependencyEdgeDescriptionProvider
+  └── (etc.)</pre>
+  </section>
+
+  <!-- ══ 8. TESTING ══ -->
+  <section id="testing">
+    <h2><span class="icon">🧪</span> Testing Strategy</h2>
+    <table>
+      <thead>
+        <tr><th>Level</th><th>Tool</th><th>Location</th><th>Command</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Frontend unit</td>
+          <td>Vitest</td>
+          <td><code>frontend/syson/</code></td>
+          <td><code>npm run test</code></td>
+        </tr>
+        <tr>
+          <td>Backend unit</td>
+          <td>JUnit 5 / Mockito</td>
+          <td><code>backend/tests/</code> + per-module</td>
+          <td><code>mvn clean verify</code></td>
+        </tr>
+        <tr>
+          <td>E2E (primary)</td>
+          <td>Playwright</td>
+          <td><code>integration-tests-playwright/</code></td>
+          <td><code>npx playwright test</code></td>
+        </tr>
+        <tr>
+          <td>E2E (legacy)</td>
+          <td>Cypress</td>
+          <td><code>integration-tests-cypress/</code></td>
+          <td><code>npm run start</code></td>
+        </tr>
+        <tr>
+          <td>Code coverage</td>
+          <td>JaCoCo (backend) / @vitest/coverage-v8</td>
+          <td><code>backend/releng/syson-test-coverage/</code></td>
+          <td><code>jshell scripts/check-coverage.jsh</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:1rem;">
+      CI enforces minimum backend coverage thresholds using JaCoCo aggregate reports.
+      Playwright E2E tests run in CI on all branches except <code>main</code> and release branches.
+    </p>
+  </section>
+
+  <!-- ══ 9. REST API ══ -->
+  <section id="restapi">
+    <h2><span class="icon">🌐</span> OMG SysML v2 Standard REST APIs</h2>
+    <p>
+      SysON implements the <strong>OMG SysML v2 standard REST API</strong> for interoperability
+      with other MBSE tools (Papyrus, Capella, third-party clients). The implementation lives in
+      <code>syson-sysml-rest-api-services</code> and follows a <strong>delegate pattern</strong>:
+      SysON provides Spring beans that implement Sirius Web delegate interfaces; Sirius Web owns
+      the actual <code>@RestController</code> classes and routing.
+    </p>
+    <p>
+      All endpoints are rooted at <code>/api/rest/projects/{projectId}</code>.
+      Standard library elements and implied relationships are automatically excluded from all
+      responses. Endpoints are marked <code>@Hidden</code> in OpenAPI — they are not shown in
+      Swagger UI.
+    </p>
+
+    <!-- ── Objects API ── -->
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">
+        Elements &amp; Relationships
+        <span class="delegate">SysONObjectRestService</span>
+      </div>
+      <table class="endpoint-table">
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits/<span class="path-param">{commitId}</span>/elements
+            </td>
+            <td>All SysML v2 elements in the project. Excludes implied relationships and standard library elements.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits/<span class="path-param">{commitId}</span>/elements/<span class="path-param">{elementId}</span>
+            </td>
+            <td>Single element by ID. Returns a JSON object with <code>@id</code> and <code>@type</code> fields plus all attributes.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits/<span class="path-param">{commitId}</span>/elements/<span class="path-param">{elementId}</span>/relationships
+            </td>
+            <td>Relationships for an element. Supports <code>direction</code> query param: <code>IN</code>, <code>OUT</code>, or <code>BOTH</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits/<span class="path-param">{commitId}</span>/roots
+            </td>
+            <td>Root namespace elements only (excludes standard library resources).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Commits API ── -->
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">
+        Commits
+        <span class="delegate">SysONProjectDataVersioningRestService</span>
+      </div>
+      <table class="endpoint-table">
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits
+            </td>
+            <td>All commits for the project. Returns a list of <code>RestCommit</code> objects.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits/<span class="path-param">{commitId}</span>
+            </td>
+            <td>Single commit by ID.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits
+            </td>
+            <td>Create a new commit. Body contains a list of <code>RestDataVersion</code> changes to record.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Changes API ── -->
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">
+        Commit Changes
+        <span class="delegate">SysONProjectDataVersioningRestService</span>
+      </div>
+      <table class="endpoint-table">
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits/<span class="path-param">{commitId}</span>/changes
+            </td>
+            <td>All changes recorded in a commit. Filterable by <code>ChangeType</code> (CREATE, UPDATE, DELETE).</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/commits/<span class="path-param">{commitId}</span>/changes/<span class="path-param">{changeId}</span>
+            </td>
+            <td>Single change by ID. Returns a <code>RestDataVersion</code> with identity and payload.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Branches API ── -->
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">
+        Branches
+        <span class="delegate">SysONProjectDataVersioningRestService</span>
+      </div>
+      <table class="endpoint-table">
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/branches
+            </td>
+            <td>All branches in the project. Returns a list of <code>RestBranch</code> objects.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/branches/<span class="path-param">{branchId}</span>
+            </td>
+            <td>Single branch by ID.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/branches
+            </td>
+            <td>Create a new branch from a given commit. Body specifies the branch name and source commit ID.</td>
+          </tr>
+          <tr>
+            <td><span class="method method-delete">DELETE</span></td>
+            <td class="endpoint-path">
+              /api/rest/projects/<span class="path-param">{projectId}</span>/branches/<span class="path-param">{branchId}</span>
+            </td>
+            <td>Delete a branch by ID. Returns the deleted <code>RestBranch</code> object.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Serialization note ── -->
+    <h3>Custom JSON Serialization</h3>
+    <p>
+      All element responses are processed by <code>SysMLv2JsonSerializer</code> (a custom Jackson
+      serializer registered via <code>SysMLv2SerializerConfig</code>, a Spring
+      <code>@ControllerAdvice</code>). It intercepts responses from the Sirius Web object
+      controller package and enforces the following output format:
+    </p>
+    <div class="serializer-grid">
+      <div class="serializer-card"><strong><code>@id</code> field</strong>Unique element ID added to every serialized element</div>
+      <div class="serializer-card"><strong><code>@type</code> field</strong>Element class name (e.g. <code>PartUsage</code>, <code>BlockDefinition</code>)</div>
+      <div class="serializer-card"><strong>Alphabetical attributes</strong>All element attributes serialized in alphabetical order for deterministic output</div>
+      <div class="serializer-card"><strong>Lowercase enums</strong>Enum literals serialized as lowercase strings per OMG spec</div>
+      <div class="serializer-card"><strong>Reference-only relationships</strong>Related elements serialized as <code>{ "@id": "..." }</code> references, not full nested objects</div>
+      <div class="serializer-card"><strong>Standard library filtered</strong>Elements from standard library resources are excluded from all responses</div>
+    </div>
+
+    <div class="api-note">
+      <strong>Integration tests:</strong> All endpoints are covered by Spring integration tests in
+      <code>ObjectRestControllerIntegrationTests</code> and
+      <code>ProjectDataVersioningRestControllerIntegrationTests</code> under
+      <code>backend/application/syson-application/src/test/</code>.
+      No OpenAPI (<code>@Operation</code> / <code>@Schema</code>) annotations are present —
+      the endpoints are marked <code>@Hidden</code> and excluded from the Swagger UI.
+    </div>
+  </section>
+
+  <!-- ══ 10. BUILD ══ -->
+  <section id="build">
+    <h2><span class="icon">🏗</span> Build Pipeline</h2>
+    <p>
+      The project uses a two-phase build. The frontend must be compiled first and its output
+      copied into the backend's static resource directory before the Maven build runs.
+    </p>
+
+    <h3>Full Local Build Sequence</h3>
+    <pre># 1 — Frontend: install dependencies and build all packages
+npm ci &amp;&amp; npm run build
+
+# 2 — Copy frontend artifacts into Spring Boot static resources
+cp -R frontend/syson/dist/* \
+      backend/application/syson-frontend/src/main/resources/static/
+
+# 3 — Backend: build, run all tests, generate coverage
+mvn -U -B -e clean verify
+
+# 4 — Verify coverage gates
+jshell scripts/check-coverage.jsh</pre>
+
+    <h3>Useful Individual Commands</h3>
+    <pre># Frontend — start dev server with live reload
+npm run start
+
+# Backend — skip tests (fast artifact build)
+mvn clean verify -DskipTests
+
+# Backend — test a single module
+mvn -pl backend/services/syson-diagram-services -am test
+
+# Backend — run one specific test class
+mvn -pl backend/services/syson-diagram-services \
+    -Dtest=MyTestClass test
+
+# Frontend — run unit tests once
+cd frontend/syson &amp;&amp; npx vitest --run --config vite.config.js</pre>
+
+    <h3>CI/CD Flow (GitHub Actions)</h3>
+    <div class="layer-stack">
+      <div class="layer layer-1"><strong>1.</strong><span class="layer-desc">Build frontend (npm ci → npm run build) + dependency health check</span></div>
+      <div class="layer layer-2"><strong>2.</strong><span class="layer-desc">Copy frontend artifacts to backend static resources</span></div>
+      <div class="layer layer-3"><strong>3.</strong><span class="layer-desc">Build backend (mvn clean verify) + JaCoCo coverage gate</span></div>
+      <div class="layer layer-4"><strong>4.</strong><span class="layer-desc">Run Playwright and Cypress E2E tests</span></div>
+      <div class="layer layer-5"><strong>5.</strong><span class="layer-desc">On tags: publish Maven artifacts to GitHub Packages, npm packages, and Docker image to Docker Hub</span></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Eclipse SysON &nbsp;·&nbsp; Eclipse Public License 2.0 &nbsp;·&nbsp;
+  <a href="https://github.com/eclipse-syson/syson" style="color:#94a3b8;">github.com/eclipse-syson/syson</a>
+  &nbsp;·&nbsp; Generated for developer reference
+</footer>
+
+</body>
+</html>

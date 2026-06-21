@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eclipse SysON — Extending SysML v2 Features</title>
+  <style>
+    :root {
+      --bg:          #f5f7fa;
+      --surface:     #ffffff;
+      --surface2:    #f0f4f8;
+      --accent:      #2563eb;
+      --green:       #16a34a;
+      --yellow:      #b45309;
+      --red:         #dc2626;
+      --text:        #111827;
+      --text-muted:  #4b5563;
+      --border:      #d1d5db;
+      --header-bg:   #1e3a5f;
+      --radius:      10px;
+      --code-bg:     #f1f5f9;
+      --code-text:   #0f172a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: var(--header-bg);
+      color: #fff;
+      padding: 44px 60px 36px;
+    }
+    header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -.02em; }
+    header p  { color: #cbd5e1; margin-top: 10px; max-width: 760px; font-size: 15px; }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 20px;
+      padding: 3px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      margin-top: 18px;
+      color: #e2e8f0;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────────── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 60px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+    }
+    nav button {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 14px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    nav button:hover  { color: var(--accent); }
+    nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Main ────────────────────────────────────────────────── */
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 40px 40px 80px;
+    }
+    .tab-panel         { display: none; }
+    .tab-panel.active  { display: block; }
+
+    /* ── Headings ────────────────────────────────────────────── */
+    h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--header-bg);
+      margin: 36px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border);
+    }
+    h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin: 22px 0 8px; }
+    p  { margin-bottom: 12px; color: var(--text-muted); }
+    ul, ol { padding-left: 22px; color: var(--text-muted); margin-bottom: 14px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Status pills ────────────────────────────────────────── */
+    .pill {
+      display: inline-block;
+      border-radius: 20px;
+      padding: 2px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      white-space: nowrap;
+    }
+    .pill-green  { background: #dcfce7; color: #15803d; }
+    .pill-yellow { background: #fef9c3; color: #854d0e; }
+    .pill-red    { background: #fee2e2; color: #b91c1c; }
+    .pill-blue   { background: #dbeafe; color: #1d4ed8; }
+    .pill-purple { background: #ede9fe; color: #6d28d9; }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 26px;
+      margin-bottom: 18px;
+    }
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+    .card-title    { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .card-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── Grid ────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    @media (max-width: 780px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      nav, header, main { padding-left: 16px; padding-right: 16px; }
+    }
+
+    /* ── Summary stat boxes ──────────────────────────────────── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 780px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      text-align: center;
+    }
+    .stat .num  { font-size: 1.9rem; font-weight: 800; line-height: 1; }
+    .stat .lbl  { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .num-green  { color: var(--green); }
+    .num-yellow { color: var(--yellow); }
+    .num-blue   { color: var(--accent); }
+    .num-purple { color: #7c3aed; }
+
+    /* ── Tables ──────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 22px; }
+    th {
+      background: var(--surface2);
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+    }
+    td { padding: 9px 14px; border: 1px solid var(--border); vertical-align: top; }
+    tr:nth-child(even) td { background: #fafafa; }
+
+    /* ── Code blocks ─────────────────────────────────────────── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 16px 18px;
+      font-family: 'Consolas', 'Cascadia Code', monospace;
+      font-size: 13px;
+      color: var(--code-text);
+      overflow-x: auto;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    code {
+      background: var(--code-bg);
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+      color: #1e40af;
+    }
+    .kw  { color: #7c3aed; font-weight: 600; }
+    .cm  { color: #6b7280; font-style: italic; }
+    .st  { color: #15803d; }
+    .an  { color: #b45309; }
+    .tp  { color: #1d4ed8; }
+
+    /* ── Callouts ────────────────────────────────────────────── */
+    .callout {
+      border-left: 4px solid;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+    .callout-info { border-color: var(--accent); background: #eff6ff; }
+    .callout-good { border-color: var(--green);  background: #f0fdf4; }
+    .callout-warn { border-color: var(--yellow); background: #fffbeb; }
+    .callout strong { color: var(--text); }
+
+    /* ── Effort meter ────────────────────────────────────────── */
+    .effort {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .effort-bar {
+      flex: 1;
+      background: #e5e7eb;
+      border-radius: 6px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .effort-bar div { height: 100%; border-radius: 6px; }
+    .eb-low    { background: var(--green); }
+    .eb-medium { background: #f59e0b; }
+    .eb-high   { background: var(--red); }
+
+    /* ── Step list ───────────────────────────────────────────── */
+    .steps { counter-reset: step; list-style: none; padding-left: 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+      color: var(--text-muted);
+    }
+    .steps li::before {
+      content: counter(step);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 50%;
+      min-width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── Tag list ────────────────────────────────────────────── */
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
+    .tag {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-family: 'Consolas', monospace;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<header>
+  <h1>Eclipse SysON — Extending SysML v2 Features</h1>
+  <p>
+    A developer guide explaining how the SysON codebase is structured for extension,
+    what is already in place, and what effort is required to implement each missing
+    SysML v2 diagram type and language feature.
+  </p>
+  <span class="badge">SysON 2026.1.6 &nbsp;·&nbsp; Java 17 &nbsp;·&nbsp; Spring Boot 3.5</span>
+</header>
+
+<!-- ── Nav tabs ─────────────────────────────────────────────────── -->
+<nav id="main-nav">
+  <button class="active" onclick="showTab('summary')">Summary</button>
+  <button onclick="showTab('architecture')">Architecture</button>
+  <button onclick="showTab('patterns')">Code Patterns</button>
+  <button onclick="showTab('roadmap')">Feature Roadmap</button>
+  <button onclick="showTab('walkthrough')">Step-by-Step Guide</button>
+</nav>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB: SUMMARY                                                  -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-summary" class="tab-panel active">
+
+  <h2>Can SysON Be Extended?</h2>
+
+  <div class="callout callout-good">
+    <strong>Short answer: Yes.</strong> The codebase is explicitly designed for extension.
+    Every diagram type, node shape, and relationship arrow is a standalone Spring
+    <code>@Service</code> bean. Adding a new one requires implementing one interface and
+    writing ~150–300 lines of Java — no framework surgery, no OSGi plugin descriptors,
+    no frontend changes.
+  </div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="num num-green">100%</div>
+      <div class="lbl">Metamodel complete<br>(all SysML v2 types present)</div>
+    </div>
+    <div class="stat">
+      <div class="num num-blue">1</div>
+      <div class="lbl">Interface to implement<br>for a new diagram type</div>
+    </div>
+    <div class="stat">
+      <div class="num num-yellow">2</div>
+      <div class="lbl">Diagram stubs already<br>registered (AFV, STV)</div>
+    </div>
+    <div class="stat">
+      <div class="num num-purple">65+</div>
+      <div class="lbl">Reusable test checkers<br>in diagram-tests module</div>
+    </div>
+  </div>
+
+  <h2>The Key Insight — Gap Is in Visualization Only</h2>
+  <p>
+    The SysML v2 EMF metamodel (<code>backend/metamodel/syson-sysml-metamodel/</code>) is
+    <strong>fully generated from the OMG specification</strong> and contains all 184+ element
+    types including <code>StateUsage</code>, <code>TransitionUsage</code>,
+    <code>CalculationUsage</code>, <code>SuccessionFlowConnectionUsage</code>, and every
+    other type defined in the spec. These types can already be stored in PostgreSQL.
+  </p>
+  <p>
+    What is missing is the <strong>diagram visualization layer</strong> — the Java classes
+    that tell Sirius Web how to draw these elements as nodes and edges on a canvas.
+    No data model work is required.
+  </p>
+
+  <h2>What Makes Extension Easy</h2>
+
+  <table>
+    <thead>
+      <tr><th>Enabler</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Pure Spring DI</strong></td>
+        <td>New diagram types register themselves by annotating a class with <code>@Service</code>. No XML, no OSGi, no configuration files.</td>
+      </tr>
+      <tr>
+        <td><strong>Complete metamodel</strong></td>
+        <td>All SysML v2 types already exist as Java interfaces. No EMF model editing required.</td>
+      </tr>
+      <tr>
+        <td><strong>Abstract base classes</strong></td>
+        <td><code>AbstractNodeDescriptionProvider</code> and <code>AbstractEdgeDescriptionProvider</code> handle 80% of boilerplate — AQL helpers, style builders, tool wiring.</td>
+      </tr>
+      <tr>
+        <td><strong>Dynamic frontend</strong></td>
+        <td>The React frontend renders whatever the backend declares. No frontend changes needed when adding a new diagram type.</td>
+      </tr>
+      <tr>
+        <td><strong>65+ test checkers</strong></td>
+        <td>The <code>syson-diagram-tests</code> module provides ready-made assertion checkers for nodes, edges, and diagrams. No new test infrastructure needed.</td>
+      </tr>
+      <tr>
+        <td><strong>100+ existing providers</strong></td>
+        <td>40 node providers and 20+ edge providers already exist — every new provider is a small variation of an existing one.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>What Makes Some Features Harder</h2>
+
+  <table>
+    <thead>
+      <tr><th>Challenge</th><th>Affects</th><th>Mitigation</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Time-ordered lifeline layout</td>
+        <td>Sequence View</td>
+        <td>Sirius Web supports custom ELK layout algorithms; requires a custom layout provider</td>
+      </tr>
+      <tr>
+        <td>Guard/trigger/effect annotations on transition edges</td>
+        <td>State Transition View</td>
+        <td>Edge label AQL expressions are supported; needs AQL service methods for condition parsing</td>
+      </tr>
+      <tr>
+        <td>Fork/join/merge diamond shapes</td>
+        <td>Action Flow View</td>
+        <td>SysON already supports custom SVG node shapes (see Package node); same pattern applies</td>
+      </tr>
+    </tbody>
+  </table>
+
+</div><!-- /tab-summary -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB: ARCHITECTURE                                             -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-architecture" class="tab-panel">
+
+  <h2>Extension Architecture</h2>
+
+  <p>
+    SysON uses a layered registration model. Every representable element passes through
+    three independent layers, each of which can be extended independently.
+  </p>
+
+  <div class="card">
+    <div class="card-title">Layer 1 — Diagram Registration</div>
+    <p style="margin-top:8px">
+      A diagram type (e.g., "State Transition View") is registered by implementing
+      <code>IViewDescriptionProvider</code> and annotating the class with Spring's
+      <code>@Service</code>. <code>SysONViewDescriptionProvider</code> collects all
+      such beans via constructor injection and passes their descriptions to Sirius Web.
+    </p>
+    <pre><span class="an">@Service</span>
+<span class="kw">public class</span> <span class="tp">StateTransitionViewDiagramDescriptionProvider</span>
+        <span class="kw">implements</span> <span class="tp">IViewDescriptionProvider</span> {
+
+    <span class="an">@Override</span>
+    <span class="kw">public</span> <span class="tp">String</span> getViewId() {
+        <span class="kw">return</span> <span class="st">"StateTransitionView"</span>;
+    }
+
+    <span class="an">@Override</span>
+    <span class="kw">public</span> <span class="tp">IRepresentationDescriptionProvider</span> getRepresentationDescriptionProvider() {
+        <span class="kw">return new</span> <span class="tp">StateTransitionViewDiagramDescriptionBuilder</span>();
+    }
+}</pre>
+    <div style="font-size:13px;color:var(--text-muted)">
+      File: <code>backend/views/syson-standard-diagrams-view/</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Layer 2 — Node &amp; Edge Providers</div>
+    <p style="margin-top:8px">
+      Inside the diagram description builder, node and edge providers define what can
+      appear on the canvas. Each provider is a focused class responsible for one element
+      type. They extend abstract base classes from <code>syson-diagram-common-view</code>.
+    </p>
+    <pre><span class="cm">// Node provider for StateUsage elements</span>
+<span class="kw">public class</span> <span class="tp">StateUsageNodeDescriptionProvider</span>
+        <span class="kw">extends</span> <span class="tp">AbstractNodeDescriptionProvider</span> {
+
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">String</span> getSemanticCandidatesExpression() {
+        <span class="kw">return</span> <span class="st">"aql:self.ownedMember-&gt;filter(sysml::StateUsage)"</span>;
+    }
+
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">List</span>&lt;<span class="tp">NodeDescription</span>&gt; getReusedChildren() {
+        <span class="cm">// compartments: entry/do/exit actions</span>
+    }
+}</pre>
+    <div style="font-size:13px;color:var(--text-muted)">
+      Base: <code>backend/views/syson-diagram-common-view/.../nodes/AbstractNodeDescriptionProvider.java</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Layer 3 — AQL Service Methods</div>
+    <p style="margin-top:8px">
+      AQL expressions in node/edge descriptions can call Java service methods for complex
+      logic (label computation, visibility conditions, creation actions). These are exposed
+      through the two designated AQL service classes per module:
+    </p>
+    <ul>
+      <li><code>DiagramQueryAQLService</code> — read-only AQL helpers (label text, candidate filtering)</li>
+      <li><code>DiagramMutationAQLService</code> — write AQL helpers (element creation, deletion)</li>
+    </ul>
+    <div class="callout callout-info" style="margin-top:12px">
+      <strong>Rule:</strong> Only these two classes are called from AQL expressions.
+      All other service classes are called from Java code only. This keeps AQL expressions
+      simple and avoids tight coupling between the diagram DSL and business logic.
+    </div>
+  </div>
+
+  <h2>Key Files for Extension</h2>
+  <table>
+    <thead>
+      <tr><th>Purpose</th><th>File / Path</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Diagram registration interface</td>
+        <td><code>backend/views/syson-common-view/.../api/IViewDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>Diagram auto-collection (Spring)</td>
+        <td><code>backend/views/syson-common-view/.../SysONViewDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>Abstract node base class</td>
+        <td><code>backend/views/syson-diagram-common-view/.../nodes/AbstractNodeDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>Abstract Definition node base</td>
+        <td><code>backend/views/syson-diagram-common-view/.../nodes/AbstractDefinitionNodeDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>Abstract edge base class</td>
+        <td><code>backend/views/syson-diagram-common-view/.../edges/AbstractEdgeDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>AFV stub (ready to fill)</td>
+        <td><code>backend/views/syson-standard-diagrams-view/.../ActionFlowViewDiagramDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>STV stub (ready to fill)</td>
+        <td><code>backend/views/syson-standard-diagrams-view/.../StateTransitionViewDiagramDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>Working reference (General View)</td>
+        <td><code>backend/views/syson-standard-diagrams-view/.../SDVDescriptionProvider.java</code></td>
+      </tr>
+      <tr>
+        <td>Test checker base</td>
+        <td><code>backend/views/syson-diagram-tests/.../checkers/AbstractChecker.java</code></td>
+      </tr>
+      <tr>
+        <td>Complete SysML v2 metamodel</td>
+        <td><code>backend/metamodel/syson-sysml-metamodel/src/main/resources/model/sysml.ecore</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+</div><!-- /tab-architecture -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB: CODE PATTERNS                                            -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-patterns" class="tab-panel">
+
+  <h2>Implementing a New Node Provider</h2>
+  <p>
+    The following pattern is used by all 40+ existing node providers.
+    Extending <code>AbstractNodeDescriptionProvider</code> means only domain-specific
+    methods need to be overridden.
+  </p>
+
+  <pre><span class="kw">public class</span> <span class="tp">StateUsageNodeDescriptionProvider</span>
+        <span class="kw">extends</span> <span class="tp">AbstractDefinitionNodeDescriptionProvider</span> {
+
+    <span class="cm">// 1. Which elements does this node represent?</span>
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">String</span> getSemanticCandidatesExpression(<span class="tp">String</span> domainType) {
+        <span class="kw">return</span> <span class="st">"aql:self.ownedMember-&gt;filter(sysml::StateUsage)"</span>;
+    }
+
+    <span class="cm">// 2. What compartments appear inside the node?</span>
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">List</span>&lt;<span class="tp">NodeDescription</span>&gt; getReusedChildren(<span class="tp">IViewDiagramElementFinder</span> cache) {
+        <span class="kw">var</span> children = <span class="kw">new</span> <span class="tp">ArrayList</span>&lt;&gt;();
+        cache.getNodeDescription(<span class="st">"StateUsage_EntryCompartment"</span>)
+             .ifPresent(children::add);
+        cache.getNodeDescription(<span class="st">"StateUsage_DoCompartment"</span>)
+             .ifPresent(children::add);
+        cache.getNodeDescription(<span class="st">"StateUsage_ExitCompartment"</span>)
+             .ifPresent(children::add);
+        <span class="kw">return</span> children;
+    }
+
+    <span class="cm">// 3. Which ports (border nodes) appear on the node boundary?</span>
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">List</span>&lt;<span class="tp">NodeDescription</span>&gt; getReusedBorderNodes(<span class="tp">IViewDiagramElementFinder</span> cache) {
+        <span class="kw">return</span> <span class="tp">List</span>.of(); <span class="cm">// states have no ports</span>
+    }
+
+    <span class="cm">// 4. What tools appear in the palette when this node is selected?</span>
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">List</span>&lt;<span class="tp">NodeToolSection</span>&gt; getToolSections(...) {
+        <span class="kw">return</span> <span class="kw">new</span> <span class="tp">STVNodeToolSectionSwitch</span>().doSwitch(element);
+    }
+}</pre>
+
+  <h2>Implementing a New Edge Provider</h2>
+  <p>
+    Edge providers are even simpler — typically 40–60 lines.
+    <code>AbstractEdgeDescriptionProvider</code> provides the <code>create()</code> and
+    <code>link()</code> methods; subclasses only declare source and target node types.
+  </p>
+
+  <pre><span class="kw">public class</span> <span class="tp">TransitionUsageEdgeDescriptionProvider</span>
+        <span class="kw">extends</span> <span class="tp">AbstractEdgeDescriptionProvider</span> {
+
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">String</span> getName() {
+        <span class="kw">return</span> <span class="st">"STV_TransitionUsage"</span>;
+    }
+
+    <span class="cm">// Source nodes: any StateUsage node</span>
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">List</span>&lt;<span class="tp">NodeDescription</span>&gt; getSourceNodes(<span class="tp">IViewDiagramElementFinder</span> cache) {
+        <span class="kw">var</span> result = <span class="kw">new</span> <span class="tp">ArrayList</span>&lt;&gt;();
+        cache.getNodeDescription(<span class="st">"StateUsageNodeDescription"</span>).ifPresent(result::add);
+        <span class="kw">return</span> result;
+    }
+
+    <span class="cm">// Target nodes: any StateUsage node</span>
+    <span class="an">@Override</span>
+    <span class="kw">protected</span> <span class="tp">List</span>&lt;<span class="tp">NodeDescription</span>&gt; getTargetNodes(<span class="tp">IViewDiagramElementFinder</span> cache) {
+        <span class="kw">return</span> getSourceNodes(cache); <span class="cm">// transitions are between states</span>
+    }
+}</pre>
+
+  <h2>Node Provider Method Reference</h2>
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Required?</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>getSemanticCandidatesExpression()</code></td><td><span class="pill pill-red">Required</span></td><td>AQL expression that returns the elements this node renders</td></tr>
+      <tr><td><code>getReusedChildren()</code></td><td><span class="pill pill-yellow">Override if needed</span></td><td>Child compartment node descriptions</td></tr>
+      <tr><td><code>getReusedBorderNodes()</code></td><td><span class="pill pill-yellow">Override if needed</span></td><td>Port/border node descriptions</td></tr>
+      <tr><td><code>getToolSections()</code></td><td><span class="pill pill-yellow">Override if needed</span></td><td>Palette tool sections shown on selection</td></tr>
+      <tr><td><code>getAllNodeDescriptions()</code></td><td><span class="pill pill-yellow">Override if needed</span></td><td>All node types this provider is compatible with</td></tr>
+      <tr><td><code>getToolsWithoutSection()</code></td><td><span class="pill pill-blue">Optional</span></td><td>Palette tools not grouped into a section</td></tr>
+    </tbody>
+  </table>
+
+  <h2>AQL Service Convention</h2>
+  <div class="callout callout-warn">
+    <strong>Important naming rule:</strong> Each service module may have exactly
+    <strong>two</strong> AQL-callable service classes:
+    <code>XXXQueryAQLService</code> (read-only) and <code>XXXMutationAQLService</code>
+    (write operations). These are the only classes invoked from AQL expressions in view
+    descriptions. All other service classes are called from Java only.
+  </div>
+
+  <pre><span class="cm">// Called from an AQL expression in a node description:</span>
+<span class="cm">// "aql:self.stv_getTransitionLabel()"</span>
+<span class="an">@Service</span>
+<span class="kw">public class</span> <span class="tp">STVQueryAQLService</span> {
+
+    <span class="kw">private final</span> <span class="tp">STVQueryService</span> queryService;
+
+    <span class="kw">public</span> <span class="tp">String</span> stv_getTransitionLabel(<span class="tp">TransitionUsage</span> transition) {
+        <span class="kw">return</span> queryService.buildLabel(transition); <span class="cm">// delegates; no logic here</span>
+    }
+}</pre>
+
+</div><!-- /tab-patterns -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB: FEATURE ROADMAP                                          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-roadmap" class="tab-panel">
+
+  <h2>Missing Feature Implementation Effort</h2>
+  <p>
+    Estimates assume a developer already familiar with the SysON codebase patterns.
+    Each estimate covers: node providers, edge providers, AQL service methods, and tests.
+  </p>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">State Transition View (STV)</div>
+        <div class="card-subtitle">Stub already registered — <code>StateTransitionViewDiagramDescriptionProvider.java</code></div>
+      </div>
+      <span class="pill pill-yellow">Medium effort</span>
+    </div>
+    <p>All metamodel types present: <code>StateUsage</code>, <code>StateDefinition</code>, <code>TransitionUsage</code>, <code>ExhibitStateUsage</code>.</p>
+    <h3>What needs to be created</h3>
+    <ul>
+      <li>Node providers: <code>StateUsageNodeDescriptionProvider</code>, <code>StateDefinitionNodeDescriptionProvider</code>, <code>ExhibitStateUsageNodeDescriptionProvider</code></li>
+      <li>Pseudostate nodes: entry/exit points (circular SVG shapes)</li>
+      <li>Edge providers: <code>TransitionUsageEdgeDescriptionProvider</code> with guard/trigger/effect label, <code>SuccessionAsUsageEdgeDescriptionProvider</code></li>
+      <li>AQL service methods for transition condition label formatting</li>
+      <li>Tool palette: create state, add transition, set trigger/guard/effect</li>
+    </ul>
+    <h3>Technical challenges</h3>
+    <ul>
+      <li>Transition edge labels need structured text parsing for <code>[guard] trigger / effect</code> syntax</li>
+      <li>Entry/exit pseudostate shapes require custom SVG node styles</li>
+    </ul>
+    <div class="effort">
+      <span style="min-width:110px">2 – 4 weeks</span>
+      <div class="effort-bar"><div class="eb-medium" style="width:50%"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Action Flow View (AFV)</div>
+        <div class="card-subtitle">Stub already registered — <code>ActionFlowViewDiagramDescriptionProvider.java</code></div>
+      </div>
+      <span class="pill pill-yellow">Medium effort</span>
+    </div>
+    <p>All metamodel types present: <code>ActionUsage</code>, <code>ActionDefinition</code>, <code>SuccessionAsUsage</code>, <code>FlowConnectionUsage</code>, control nodes.</p>
+    <h3>What needs to be created</h3>
+    <ul>
+      <li>Node providers: <code>ActionUsageNodeDescriptionProvider</code> (flow context variant), <code>PerformActionUsageNodeDescriptionProvider</code></li>
+      <li>Control node shapes: Fork (horizontal bar), Join (horizontal bar), Merge (diamond), Decision (diamond), Start (filled circle), Done (bullseye)</li>
+      <li>Edge providers: <code>SuccessionAsUsageEdgeDescriptionProvider</code>, <code>FlowConnectionUsageEdgeDescriptionProvider</code></li>
+      <li>Tool palette: add action, add fork/join/merge/decision, draw flow edge</li>
+    </ul>
+    <h3>Technical challenges</h3>
+    <ul>
+      <li>Fork/Join/Merge/Decision nodes need custom SVG shapes (pattern exists for Package node)</li>
+      <li>Item flow labels on <code>FlowConnectionUsage</code> edges</li>
+    </ul>
+    <div class="effort">
+      <span style="min-width:110px">2 – 4 weeks</span>
+      <div class="effort-bar"><div class="eb-medium" style="width:50%"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Sequence View</div>
+        <div class="card-subtitle">No stub — new module required</div>
+      </div>
+      <span class="pill pill-red">High effort</span>
+    </div>
+    <p>Metamodel types present: interactions modelled as action sequences in SysML v2.</p>
+    <h3>What needs to be created</h3>
+    <ul>
+      <li>New view module: <code>syson-diagram-sequence-view</code></li>
+      <li>Lifeline node provider (vertical swim-lane shapes)</li>
+      <li>Message edge providers with time-ordering semantics</li>
+      <li>Combined fragment nodes (loop, alt, opt, par)</li>
+      <li><strong>Custom ELK layout algorithm</strong> for time-ordered vertical layout — this is the main differentiator from other views</li>
+    </ul>
+    <h3>Technical challenges</h3>
+    <ul>
+      <li>Sirius Web uses ELK for layout; a custom layout provider must be implemented to enforce vertical time ordering</li>
+      <li>Lifeline activation bars require nested node shapes not commonly used elsewhere</li>
+      <li>Interaction fragments are a structurally different modelling paradigm from structural/behavioural diagrams</li>
+    </ul>
+    <div class="effort">
+      <span style="min-width:110px">6 – 10 weeks</span>
+      <div class="effort-bar"><div class="eb-high" style="width:85%"></div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Geometry View</div>
+          <div class="card-subtitle">No stub — new module required</div>
+        </div>
+        <span class="pill pill-yellow">Medium effort</span>
+      </div>
+      <p>Spatial layout properties of physical/geometric elements.</p>
+      <h3>Approach</h3>
+      <ul>
+        <li>New table or form-based view (similar to Requirements Table)</li>
+        <li>Columns: element, bounding box, coordinate frame, mass, inertia</li>
+        <li>No geometric canvas rendering required (table pattern is simpler)</li>
+      </ul>
+      <div class="effort">
+        <span style="min-width:110px">2 – 3 weeks</span>
+        <div class="effort-bar"><div class="eb-medium" style="width:35%"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Grid / Cross-Reference View</div>
+          <div class="card-subtitle">No stub — new module required</div>
+        </div>
+        <span class="pill pill-green">Low effort</span>
+      </div>
+      <p>Spreadsheet-style element cross-reference matrix.</p>
+      <h3>Approach</h3>
+      <ul>
+        <li>New table view module (mirror <code>syson-table-requirements-view</code>)</li>
+        <li>Rows and columns both represent model elements</li>
+        <li>Cell values represent relationships (e.g., allocation, satisfaction)</li>
+      </ul>
+      <div class="effort">
+        <span style="min-width:110px">1 – 2 weeks</span>
+        <div class="effort-bar"><div class="eb-low" style="width:20%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Missing Element Types in Existing Diagrams</div>
+        <div class="card-subtitle">CalculationUsage, AnalysisCaseUsage, VerificationCaseUsage, RenderingUsage, …</div>
+      </div>
+      <span class="pill pill-green">Low effort per type</span>
+    </div>
+    <p>
+      These element types exist in the metamodel and could appear in the General View or
+      Interconnection View. Each needs one node provider (~100 lines) following the exact
+      same pattern as existing providers.
+    </p>
+    <div class="tags">
+      <span class="tag">CalculationUsage</span>
+      <span class="tag">CalculationDefinition</span>
+      <span class="tag">AnalysisCaseUsage</span>
+      <span class="tag">AnalysisCaseDefinition</span>
+      <span class="tag">VerificationCaseUsage</span>
+      <span class="tag">VerificationCaseDefinition</span>
+      <span class="tag">RenderingUsage</span>
+      <span class="tag">RenderingDefinition</span>
+      <span class="tag">FlowConnectionDefinition</span>
+    </div>
+    <div class="effort">
+      <span style="min-width:110px">1 – 3 days each</span>
+      <div class="effort-bar"><div class="eb-low" style="width:15%"></div></div>
+    </div>
+  </div>
+
+  <h2>REST API Write Operations</h2>
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">SysML v2 OMG REST API — POST / DELETE support</div>
+        <div class="card-subtitle">Currently returns HTTP 405 for all write operations</div>
+      </div>
+      <span class="pill pill-red">High effort</span>
+    </div>
+    <p>
+      SysON's internal write path goes through GraphQL mutations and Sirius Web's
+      collaborative editing stack. Bridging this to the OMG REST commit model
+      (which sends JSON-LD element trees in a single POST) would require a translation
+      layer that converts OMG commit payloads into Sirius Web editing context operations.
+    </p>
+    <ul>
+      <li>REST write requests must be translated into EMF change operations on a live editing context</li>
+      <li>The OMG REST API uses a commit/branch versioning model that SysON does not implement (single-commit-per-project constraint)</li>
+      <li>Resolving cross-references in JSON-LD payloads to EMF URIs requires careful mapping</li>
+    </ul>
+    <div class="effort">
+      <span style="min-width:110px">8 – 14 weeks</span>
+      <div class="effort-bar"><div class="eb-high" style="width:100%"></div></div>
+    </div>
+  </div>
+
+</div><!-- /tab-roadmap -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB: STEP-BY-STEP GUIDE                                       -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-walkthrough" class="tab-panel">
+
+  <h2>Implementing the State Transition View — Step-by-Step</h2>
+  <p>
+    The State Transition View is the best first extension target: the stub is already
+    registered, the metamodel types are complete, and the pattern is identical to the
+    General View. This walkthrough shows the exact sequence of steps.
+  </p>
+
+  <div class="callout callout-info">
+    <strong>Prerequisites:</strong> Java 17, Maven, a running SysON instance
+    (PostgreSQL + Spring Boot). Familiarity with the General View node providers is
+    helpful but not required.
+  </div>
+
+  <h3>Phase 1 — Set up the module structure</h3>
+  <ol class="steps">
+    <li>
+      <div>
+        Open <code>backend/views/syson-standard-diagrams-view/</code>.
+        This is where AFV and STV stubs live. You will add new classes here —
+        no new Maven module is needed for STV.
+      </div>
+    </li>
+    <li>
+      <div>
+        Create a sub-package <code>org.eclipse.syson.standard.diagrams.view.stv</code>
+        inside <code>src/main/java/</code>. This will hold all STV-specific providers,
+        keeping them separate from SDV and AFV classes.
+      </div>
+    </li>
+    <li>
+      <div>
+        Create an <code>STVDescriptionBuilder</code> class (implements
+        <code>IRepresentationDescriptionProvider</code>). This is the wiring class
+        that assembles node and edge providers into a complete diagram description.
+        Copy the structure from <code>SDVDiagramDescriptionBuilder</code>.
+      </div>
+    </li>
+  </ol>
+
+  <h3>Phase 2 — Create node providers</h3>
+  <ol class="steps">
+    <li>
+      <div>
+        Create <code>StateUsageNodeDescriptionProvider</code> extending
+        <code>AbstractDefinitionNodeDescriptionProvider</code>.
+        Override <code>getSemanticCandidatesExpression()</code> to return
+        <code>"aql:self.ownedMember-&gt;filter(sysml::StateUsage)"</code>.
+      </div>
+    </li>
+    <li>
+      <div>
+        Create <code>StateDefinitionNodeDescriptionProvider</code> with the same pattern,
+        targeting <code>sysml::StateDefinition</code>.
+      </div>
+    </li>
+    <li>
+      <div>
+        Create compartment node providers for the three state action compartments:
+        <code>STVEntryCompartmentNodeDescriptionProvider</code>,
+        <code>STVDoCompartmentNodeDescriptionProvider</code>,
+        <code>STVExitCompartmentNodeDescriptionProvider</code>.
+        Each shows <code>StateSubactionMembership</code>-owned actions.
+      </div>
+    </li>
+    <li>
+      <div>
+        (Optional) Add pseudostate nodes using a custom SVG image style
+        — look at how the Package node renders its icon for the SVG pattern.
+      </div>
+    </li>
+  </ol>
+
+  <h3>Phase 3 — Create edge providers</h3>
+  <ol class="steps">
+    <li>
+      <div>
+        Create <code>TransitionUsageEdgeDescriptionProvider</code> extending
+        <code>AbstractEdgeDescriptionProvider</code>. Source and target are both
+        <code>StateUsageNodeDescription</code>.
+      </div>
+    </li>
+    <li>
+      <div>
+        Add label support for guard/trigger/effect by implementing a
+        <code>getEdgeLabelExpression()</code> override that calls an AQL service:
+        <code>"aql:self.stv_getTransitionLabel()"</code>.
+      </div>
+    </li>
+    <li>
+      <div>
+        Add the AQL service method in <code>DiagramQueryAQLService</code>
+        (or create a new <code>STVQueryAQLService</code> if the STV module is large enough
+        to warrant its own service). The method reads the <code>TransitionUsage</code>'s
+        guard/trigger/effect members and formats them as a string.
+      </div>
+    </li>
+  </ol>
+
+  <h3>Phase 4 — Fill in the stub</h3>
+  <ol class="steps">
+    <li>
+      <div>
+        Open <code>StateTransitionViewDiagramDescriptionProvider.java</code>.
+        Replace the empty <code>newDiagramDescription()</code> call with a call to
+        your <code>STVDescriptionBuilder</code>, passing the node and edge providers.
+        Remove the stub comment about "only useful for the menu entry."
+      </div>
+    </li>
+    <li>
+      <div>
+        Add a <code>canCreateDiagram()</code> precondition in
+        <code>StateTransitionViewCreateService</code> (or equivalent) that restricts
+        creation to <code>StateDefinition</code> context elements.
+      </div>
+    </li>
+  </ol>
+
+  <h3>Phase 5 — Test</h3>
+  <ol class="steps">
+    <li>
+      <div>
+        Create a test class in <code>backend/views/syson-diagram-tests/</code>.
+        Use the existing <code>AbstractChecker</code> subclasses —
+        <code>NodeDescriptionHasDirectEditToolChecker</code>,
+        <code>NodeDescriptionHasDeleteToolChecker</code>,
+        <code>EdgeDescriptionHasReconnectToolChecker</code> — to validate all providers.
+      </div>
+    </li>
+    <li>
+      <div>
+        Run: <code>mvn -pl backend/views/syson-standard-diagrams-view -am test</code>
+        to verify the new providers pass all checker invariants.
+      </div>
+    </li>
+    <li>
+      <div>
+        Start the application (<code>UserTools/StartSysOn.bat</code> or
+        <code>docker-compose up</code>), open SysON at <code>http://localhost:8080</code>,
+        create a project, open a model with a <code>StateDefinition</code>, and
+        right-click → New Representation → State Transition View. The diagram should
+        render with state nodes and transition arrows.
+      </div>
+    </li>
+  </ol>
+
+  <h2>Quick Reference — Build Commands</h2>
+  <pre><span class="cm"># Build only the views module (fast iteration)</span>
+mvn -pl backend/views/syson-standard-diagrams-view -am clean verify -DskipTests
+
+<span class="cm"># Run tests for the new view</span>
+mvn -pl backend/views/syson-standard-diagrams-view -am test
+
+<span class="cm"># Run a specific test class</span>
+mvn -pl backend/views/syson-standard-diagrams-view -Dtest=StateTransitionViewTest test
+
+<span class="cm"># Full build with coverage check</span>
+mvn -U -B -e clean verify
+jshell scripts/check-coverage.jsh</pre>
+
+  <div class="callout callout-good">
+    <strong>No frontend changes required.</strong> Once the backend emits a new
+    <code>DiagramDescription</code> with a new <code>viewId</code>, the Sirius Web
+    React frontend automatically discovers it, shows it in the "New Representation" menu,
+    and renders nodes and edges using the styles declared in the backend providers.
+  </div>
+
+</div><!-- /tab-walkthrough -->
+
+</main>
+
+<script>
+  function showTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('#main-nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+</script>
+
+</body>
+</html>

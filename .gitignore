@@ -19,6 +19,8 @@ ehthumbs_vista.db
 .factorypath
 # Eclipse project metadata (IDE-generated, not project-specific)
 **/.project
+**/.classpath
+**/.settings/org.eclipse.m2e.core.prefs
 
 ### Java ###
 # Compiled class file
